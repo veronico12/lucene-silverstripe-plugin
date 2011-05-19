@@ -13,7 +13,7 @@ class ZendSearchLuceneWrapper {
      * The name of the index. 
      * @static
      */
-    public static $indexName = 'Silverstripe';
+    public static $indexName = 'Lucene';
 
     /** 
      * Stores a handle to the search index so we don't have to keep recreating it. 
@@ -46,19 +46,30 @@ class ZendSearchLuceneWrapper {
      *
      * {@link http://zendframework.com/manual/en/zend.search.lucene.searching.html}
      *
-	 * @param   Mixed           $query  String or object to pass to the find() method
-	 *                                  of the index.
+     * The parameter list takes the same argument list as Zend_Search_Lucene_Index,
+     * enabling you to use sort arguments.
+     *
      * @link http://framework.zend.com/apidoc/core/Zend_Search_Lucene/Zend_Search_Lucene_Proxy.html#find
 	 * @return  Array           An array of Zend_Search_Lucene_Search_QueryHit 
 	 *                          objects representing the results of the search.
      * @todo Add query logging
      */
-    public static function find($query) {
-        $index = self::getIndex();
-        try {
-            $hits = $index->find($query);
-        } catch ( Exception $e) {
+    public static function find() {
+        $query = func_get_args();
+        $hits = SessionSearchCache::getCached($query);
+        if ( ! $hits ) {
             $hits = array();
+            try {
+                $index = self::getIndex();
+//                $hits = call_user_func_array(array($index, 'find'), $query);
+$hits = $index->find('Title:personal');
+                SessionSearchCache::cache($query, $hits);
+            } catch ( Exception $e) { 
+                user_error(
+                    'Zend_Search_Lucene threw an exception: '.(string)$e,
+                    E_USER_WARNING
+                );
+            }
         }
 		return $hits;
     }
@@ -385,7 +396,6 @@ class ZendSearchLuceneWrapper {
      * Returns a data array of all indexable DataObjects.  For use when reindexing.
      */
     public static function getAllIndexableObjects($className='DataObject') {
-        // We'll estimate that we'll be indexing the same number of things as last time...
         $possibleClasses = ClassInfo::subclassesFor($className);
         $extendedClasses = array();
         foreach( $possibleClasses as $possibleClass ) {
@@ -396,11 +406,11 @@ class ZendSearchLuceneWrapper {
         $indexed = array();
         foreach( $extendedClasses as $className ) {
             $config = singleton($className)->getLuceneClassConfig();
-            $objects = DataObject::get($className, $config['index_filter']);
-            if ( $objects === null ) continue;
-            foreach( $objects as $object ) {
-                // SiteTree objects only get indexed if they're published...
-                if ( $object->is_a('SiteTree') && ! $object->getExistsOnLive() ) continue;
+            // TODO: SiteTree only searched if published
+            $query = 'SELECT "ID", "ClassName" FROM "'.$className.'"';
+            if ( $config['index_filter'] ) $query .= ' WHERE '.$config['index_filter'];
+            $result = mysql_unbuffered_query($query);
+            while( $object = mysql_fetch_object($result) ) {
                 // Only re-index if we haven't already indexed this DataObject
                 if ( ! array_key_exists($object->ClassName.' '.$object->ID, $indexed) ) {
                     $indexed[$object->ClassName.' '.$object->ID] = array(

@@ -240,7 +240,7 @@ Object::add_extension(
         {
             "Title" : true,
             "CreatedDate" : {
-                name : "Title",
+                name : "Date",
                 type : "text",
                 content_filter : "strtotime"
             },
@@ -329,6 +329,12 @@ Object::add_extension(
     'Foo', 
     "'".json_encode($fields)."', '".json_encode($class)."'"
 );
+
+
+TESTING THE CONFIGURATION
+
+By visiting /Lucene/diagnose you will get a full readout of your config options.
+This can help you narrow down any configuration oddities.
 
 
 REBUILDING THE SEARCH INDEX
@@ -482,6 +488,7 @@ $NextUrl - URL to the next page of results
   $PageNumber
   $Link  (URL to this page of search results)
   $Current   (Boolean indicating whether this is the current page)
+  $Start  (use this as the URL parameter start to get to this page)
 <% end_control %>  
 
 A useful extra function is the SearchTextHighlight string modifier.  If you use 

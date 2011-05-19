@@ -208,7 +208,7 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
         if ( ! $config ) return;
 
         // Is it a JSON-encoded array?
-        $json = json_decode($config);
+        $json = json_decode($config, true);
         if ( is_array($json) ) $config = $json;
 
         // Is is a comma-separated string?
@@ -349,6 +349,10 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
                 .'http://www.silverstripe.org/queued-jobs-module/</a>.')
             );
         }
+        // Set up include path
+        set_include_path(
+            dirname(__FILE__) . PATH_SEPARATOR . get_include_path()
+        );
 		if(!is_array($searchableClasses)) $searchableClasses = array($searchableClasses);
 		foreach($searchableClasses as $class) {
 			if(isset(self::$defaultColumns[$class])) {
@@ -366,6 +370,11 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
         Zend_Search_Lucene_Search_QueryParser::setDefaultEncoding(ZendSearchLuceneSearchable::$encoding);
         Zend_Search_Lucene_Analysis_Analyzer::setDefault( 
             new StandardAnalyzer_Analyzer_Standard_English() 
+        );
+        // Add the /Lucene/xxx URLs
+        Director::addRules(
+            100, 
+            array( 'Lucene' => 'LeftAndMain' )
         );
 	}
 
