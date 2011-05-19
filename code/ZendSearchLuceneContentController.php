@@ -116,6 +116,8 @@ class ZendSearchLuceneContentController extends Extension {
      *   displayed page.</li>
      *   <li>IsEllipsis - a boolean indicating whether this page is actually an
      *   ellipsis indicating more pages that aren't shown.</li>
+     *   <li>Start - the value you should use for the 'start' URL parameter for 
+     *   this page.</li>
      * </ul>
      *
      * Uses the ZendSearchLuceneSearchable::$pageLength, 
@@ -126,9 +128,13 @@ class ZendSearchLuceneContentController extends Extension {
      * @access private
      * @param   Array           $hits       An array of Zend_Search_Lucene_Search_QueryHit objects
      * @param   SS_HTTPRequest  $request    The request that generated the search
+     * @param   Integer         $start      The first hit to use in the results 
+     *                                      dataset (defaults to 'start' from GET/POST)
+     * @param   Integer         $pageLength The number of results to show per page
+     *                                      (defaults to ZendSearchLuceneSearchable::$pageLength)
      * @return  Array                       A custom array containing pagination data.
      */
-    protected function getDataArrayFromHits($hits, $request) {
+    public function getDataArrayFromHits($hits, $request, $start = null, $pageLength = null) {
 		$data = array(
 			'Results' => null,
 			'Query' => null,
@@ -142,12 +148,15 @@ class ZendSearchLuceneContentController extends Extension {
 			'NextUrl' => DBField::create('Text', 'false'),
 			'SearchPages' => new DataObjectSet()
 		);
-		
-        $pageLength = ZendSearchLuceneSearchable::$pageLength;              // number of results per page
+		if ( ! $pageLength ) {
+            $pageLength = ZendSearchLuceneSearchable::$pageLength;              // number of results per page
+        }
         $alwaysShowPages = ZendSearchLuceneSearchable::$alwaysShowPages;    // always show this many pages in pagination
         $maxShowPages = ZendSearchLuceneSearchable::$maxShowPages;          // maximum number of pages shown in pagination
 
-		$start = $request->requestVar('start') ? (int)$request->requestVar('start') : 0;
+        if ( ! $start ) {
+    		$start = $request->requestVar('start') ? (int)$request->requestVar('start') : 0;
+        }
 		$currentPage = floor( $start / $pageLength ) + 1;
 		$totalPages = ceil( count($hits) / $pageLength );
 		if ( $totalPages == 0 ) $totalPages = 1;
@@ -164,7 +173,12 @@ class ZendSearchLuceneContentController extends Extension {
 			}
 			$obj->score = $hit->score;
 			$obj->Number = $k + 1; // which number result it is...
-			$obj->Link = $hit->Link;
+			try {
+    			$obj->Link = $hit->Link;
+            } catch (Exception $e) {
+                // Might not have Link
+                $obj->Link = false;
+            }
 			$results->push($obj);
 		}
 
@@ -208,9 +222,11 @@ class ZendSearchLuceneContentController extends Extension {
                 $obj = new DataObject();
                 $obj->IsEllipsis = false;
                 $obj->PageNumber = $i;
+                $pageStart = ($i - 1) * $pageLength;
                 $obj->Link = build_search_url(array(
-                    'start' => ($i - 1) * $pageLength
+                    'start' => $pageStart
                 ));
+                $obj->Start = $pageStart;
                 $obj->Current = false;
                 if ( $i == $currentPage ) $obj->Current = true;
                 $data['SearchPages']->push($obj);
@@ -234,9 +250,11 @@ class ZendSearchLuceneContentController extends Extension {
                     $obj = new DataObject();
                     $obj->IsEllipsis = false;
                     $obj->PageNumber = $i;
+                    $pageStart = ($i - 1) * $pageLength;
                     $obj->Link = build_search_url(array(
-                        'start' => ($i - 1) * $pageLength
+                        'start' => $pageStart
                     ));
+                    $obj->Start = $pageStart;
                     $obj->Current = false;
                     if ( $i == $currentPage ) $obj->Current = true;
                     $data['SearchPages']->push($obj);                    

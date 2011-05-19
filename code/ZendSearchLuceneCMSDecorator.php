@@ -15,7 +15,9 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
      */
     public static $allowed_actions = array(
         'rebuildZendSearchLuceneIndex',
-        'reindex'
+        'reindex',
+        'diagnose',
+        'search'
     );
 
     /**
@@ -67,6 +69,82 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
         echo "<br />\n".'Finished ('.round(microtime(true)-$start, 3).' seconds)'."<br />\n"; flush();
     }
 
+    /**
+     * Method for testing search
+     */
+    public function search() {
+        $index = ZendSearchLuceneWrapper::getIndex();
+        
+        $hits =  $index->find('Title:personal');
+        var_dump( count($hits) );
+        foreach( $hits as $hit ) {
+            var_dump( $hit->Title );
+        }
+    }
+
+    /**
+     * Method for testing config
+     */
+    public function diagnose() {
+        echo '<h1>Lucene Diagnosis</h1>';
+        echo '<hr /><h2>Session</h2>';
+        Debug::dump( Session::get_all() );
+        echo '<hr /><h2>Index</h2>';
+        $idx = ZendSearchLuceneWrapper::getIndex();
+        echo '<p>Number of records in the index: '.$idx->count().'</p>';
+        echo '<p>Number of records in the index (excluding deleted records): '.$idx->numDocs().'</p>';
+        echo '<hr /><h2>Database setup</h2>';
+        $max_packet = mysql_fetch_object( 
+            mysql_query('SELECT @@max_allowed_packet AS size') 
+        );
+        echo '<p>Your MySQL max_allowed_packet value is '.$max_packet->size.'.<br/>';
+        if ( $max_packet->size >= 128 * 1024 * 1024 ) {
+            echo 'This should be high enough to cope with large datasets.';
+        } else {
+            echo 'This may cause issues with large datasets.</p>';
+            echo '<p>To rectify this, you can add the following lines to your _config.php:</p>';
+            echo '<pre>'
+            .'mysql_query(\'SET GLOBAL net_buffer_length=1000000\');'."\n"
+            .'mysql_query(\'SET GLOBAL max_allowed_packet=1000000000\');</pre>';
+            echo '<p>Alternatively, you can set these config values in your MySQL server config file.';
+        }
+        echo '</p>';
+        $log_bin = mysql_fetch_object( 
+            mysql_query('SELECT @@log_bin AS log_bin') 
+        );
+        if ( $log_bin->log_bin == 0 ) {
+            echo '<p>Your MySQL server is set to not use the binary log.<br/>'
+            .'This is the correct setting.</p>';
+        } else {
+            echo '<p>Your MySQL server is set to use the binary log.<br/>'
+            .'This will result in a large amount of disk space being used for '
+            .'logging Lucene operations, which can use many GB of space with '
+            .'large datasets.</p>';
+            echo '<p>To rectify this, you can add the following lines to your _config.php:</p>';
+            echo '<pre>'
+            .'mysql_query(\'SET GLOBAL log_bin=0\');'."\n"
+            .'</pre>';
+            echo '<p>Alternatively, you can set this config value in your MySQL server config file.';            
+        }
+
+        $classes = ClassInfo::subclassesFor('DataObject');
+        foreach( $classes as $class ) {
+            if ( ! Object::has_extension($class, 'ZendSearchLuceneSearchable') ) continue;
+            $class_config = singleton($class)->getLuceneClassConfig();
+            echo '<hr/><h2>'.$class.'</h2>';
+            echo '<h3>Class config</h3>';
+            Debug::dump( $class_config );
+            echo '<h3>Field config</h3>';
+            foreach( singleton($class)->getSearchedVars() as $fieldname ) {
+                echo '<h4>'.$fieldname.'</h4>';
+                if ( $fieldname == 'Link' ) echo '<p>No output means that Link is not indexed for this class.</p>';
+                @Debug::dump( singleton($class)->getLuceneFieldConfig($fieldname) );
+            }
+        }
+        
+
+
+    }
 
 }
 
