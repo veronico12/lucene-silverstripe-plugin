@@ -56,7 +56,7 @@ class ZendSearchLuceneWrapper {
      */
     public static function find() {
         $query = func_get_args();
-        $hits = SessionSearchCache::getCached($query);
+        $hits = (Director::isDev() ? SessionSearchCache::getCached($query) : false);
         if ( ! $hits ) {
             $hits = array();
             try {
@@ -163,21 +163,22 @@ $hits = $index->find('Title:personal');
                 if ( ! $content ) continue;
                 // Use the first extractor we find that gives us content.
                 $doc = new Zend_Search_Lucene_Document();
-                $doc->addField(
-                    Zend_Search_Lucene_Field::Text(
-                        'body',  // We're storing text in files in a field called 'body'.
-                        $content, 
-                        ZendSearchLuceneSearchable::$encoding
-                    )
+                $field = Zend_Search_Lucene_Field::Text(
+                    'body',  // We're storing text in files in a field called 'body'.
+                    $content, 
+                    ZendSearchLuceneSearchable::$encoding
                 );
+                $doc->addField($field);
                 break;
             }
         }
         // Index the fields we've specified in the config
         $fields = array_merge($object->getExtraSearchFields(), $object->getSearchFields());
         foreach( $fields as $fieldName ) {
+            $field_config = $object->getLuceneFieldConfig($fieldName);
             // Normal database field or function call
             $field = self::getZendField($object, $fieldName);
+            if ( isset($field_config['boost']) ) $field->boost = $field_config['boost'];
             if ( ! $field ) continue;
             $doc->addField($field);
         }
