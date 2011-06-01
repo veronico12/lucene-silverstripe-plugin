@@ -238,7 +238,11 @@ Object::add_extension(
     'Page',
     "ZendSearchLuceneSearchable('
         {
-            "Title" : true,
+            "Title" : {
+                name : "Title",
+                type : "text",
+                boost: "1.5"
+            },
             "CreatedDate" : {
                 name : "Date",
                 type : "text",
@@ -270,6 +274,12 @@ each field are:
  * type
    The type of indexing to use.  Default is "text", legal options are "text", 
    "keyword", "unstored" and "unindexed".
+
+ * boost
+   The importance of this field compared to other fields.  Default boost is 1.
+   Setting this to a higher value will give more importance to a term if it is
+   found in this field.  Useful for making a title field more important than
+   a content field.
 
  * content_filter
    a callback that should be used to transform the field value
