@@ -408,9 +408,14 @@ $hits = $index->find('Title:personal');
         foreach( $extendedClasses as $className ) {
             $config = singleton($className)->getLuceneClassConfig();
             // TODO: SiteTree only searched if published
-            $query = 'SELECT "ID", "ClassName" FROM "'.$className.'"';
+            $query = 'SELECT "'.$className.'"."ID", "ClassName" FROM "'.$className.'"';
+            if ( $className != 'SiteTree' && singleton($className)->is_a('SiteTree') ) {
+                // We need to join on SiteTree to index Pages etc
+                $query .= ' INNER JOIN "SiteTree" ON "'.$className.'"."ID" = "SiteTree"."ID"';
+            }
             if ( $config['index_filter'] ) $query .= ' WHERE '.$config['index_filter'];
             $result = mysql_unbuffered_query($query);
+            if ( mysql_error() ) continue; // Can't index this one... ignore for now.
             while( $object = mysql_fetch_object($result) ) {
                 // Only re-index if we haven't already indexed this DataObject
                 if ( ! array_key_exists($object->ClassName.' '.$object->ID, $indexed) ) {
