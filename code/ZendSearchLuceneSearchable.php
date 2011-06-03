@@ -382,17 +382,16 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
      * Indexes the object after it has been written to the database.
      */
     public function onAfterWrite() {
+        parent::onAfterWrite();
         // Obey index filter rules
         $objs = ZendSearchLuceneWrapper::getAllIndexableObjects($this->owner->ClassName);
         foreach( $objs as $obj ) {
             if ( ! is_array($obj) ) continue;
             if ( ! is_object($this->owner) ) continue;
             if ( $obj[0] == $this->owner->class && $obj[1] == $this->owner->ID ) {
-                ZendSearchLuceneWrapper::delete($this->owner);
                 ZendSearchLuceneWrapper::index($this->owner);
             }
         }
-        parent::onAfterWrite();
     }
 
     /**
