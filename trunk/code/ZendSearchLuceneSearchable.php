@@ -384,11 +384,11 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
     public function onAfterWrite() {
         // Obey index filter rules
         $objs = ZendSearchLuceneWrapper::getAllIndexableObjects($this->owner->ClassName);
-        ZendSearchLuceneWrapper::delete($this->owner);
         foreach( $objs as $obj ) {
-            if ( ! is_object($obj) ) continue;
+            if ( ! is_array($obj) ) continue;
             if ( ! is_object($this->owner) ) continue;
             if ( $obj[0] == $this->owner->class && $obj[1] == $this->owner->ID ) {
+                ZendSearchLuceneWrapper::delete($this->owner);
                 ZendSearchLuceneWrapper::index($this->owner);
             }
         }
