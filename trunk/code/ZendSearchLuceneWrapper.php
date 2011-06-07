@@ -407,14 +407,16 @@ $hits = $index->find('Title:personal');
         $indexed = array();
         foreach( $extendedClasses as $className ) {
             $config = singleton($className)->getLuceneClassConfig();
-            // TODO: SiteTree only searched if published
-            $query = 'SELECT "'.$className.'"."ID", "ClassName" FROM "'.$className.'"';
-            if ( $className != 'SiteTree' && singleton($className)->is_a('SiteTree') ) {
-                // We need to join on SiteTree to index Pages etc
-                $query .= ' INNER JOIN "SiteTree" ON "'.$className.'"."ID" = "SiteTree"."ID"';
+            $query = Object::create('SQLQuery');
+            $baseClass = array_shift(ClassInfo::dataClassesFor($className));
+            $query->select("\"$baseClass\".\"ID\"", "\"$baseClass\".\"ClassName\"");
+            $query->from($className);
+            if ( $baseClass != $className ) {
+                $query->leftJoin($baseClass, "\"$className\".\"ID\" = \"$baseClass\".\"ID\"");
             }
-            if ( $config['index_filter'] ) $query .= ' WHERE '.$config['index_filter'];
-            $result = mysql_unbuffered_query($query);
+            $filter = $config['index_filter'] ? $config['index_filter'] : '';
+            $query->where($filter);
+            $result = mysql_unbuffered_query($query->sql());
             if ( mysql_error() ) continue; // Can't index this one... ignore for now.
             while( $object = mysql_fetch_object($result) ) {
                 // Only re-index if we haven't already indexed this DataObject
