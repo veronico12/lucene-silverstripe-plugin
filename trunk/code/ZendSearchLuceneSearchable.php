@@ -409,11 +409,7 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
      *                  is searched.
      */
     public function getSearchedVars() {
-        return array_merge(
-            self::$extraSearchFields,
-            $this->getSearchFields(),
-            array('Link')
-        );
+        return self::$extraSearchFields + $this->getSearchFields() + array('Link');
     }
 
     /**
