@@ -249,6 +249,7 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
             $tmp = array(
                 'name' => $fieldName,
                 'type' => false,
+                'boost' => '1.0',
                 'content_filter' => false
             );
             $tmp = array_merge($tmp, $data);
@@ -264,8 +265,7 @@ class ZendSearchLuceneSearchable extends DataObjectDecorator {
             if ( !$tmp['type'] && in_array($fieldName, self::$keyword_fields) ) {
                 $tmp['type'] = 'keyword';
             }
-            // Default to text indexing
-            if ( !$tmp['type'] ) $tmp['type'] = 'text';
+            if ( !$tmp['type'] ) $tmp['type'] = 'unstored';
             $this->fieldConfig[$fieldName] = $tmp;
 	    }
     }
