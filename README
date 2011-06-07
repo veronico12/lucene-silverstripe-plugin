@@ -65,6 +65,20 @@ Run /dev/build?flush=1 to tell your SilverStripe about your new module, and your
 new search engine is installed!  (You still need to enable it - see below.)
 
 
+QueuedJobs
+----------
+
+The QueuedJobs module recommends setting your system up to use the 
+_ss_environment.php config file, and trigger jobs using a cron job that calls 
+SilverStripe in command line mode.
+
+This tends to create permissions issues, where the user running the cron job 
+can't access files indexed by the web user.  It's best to use a cron job using
+wget or another tool that will hit the webserver directly, eg:
+
+*/1 * * * * wget http://localhost/dev/tasks/ProcessJobQueueTask >> /dev/null 2>&1
+
+
 Third-Party Utility Installation
 --------------------------------
 
