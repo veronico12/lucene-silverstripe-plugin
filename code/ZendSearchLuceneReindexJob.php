@@ -3,8 +3,6 @@
 /**
  * The job description class for reindexing the search index via the Queued Jobs 
  * SilverStripe module.
- * 
- * @TODO this keeps copying the parameter list around taking up more and more memory, and runs out.  Not sure where exactly.
  *
  * @package lucene-silverstripe-module
  * @author Darren Inwood <darren.inwood@chrometoaster.com>
@@ -41,7 +39,6 @@ class ZendSearchLuceneReindexJob extends AbstractQueuedJob implements QueuedJob 
     }
 
     public function process() {
-
 		// if there's no more, we're done!
 		if (!count($this->jobData)) {
 			$this->isComplete = true;

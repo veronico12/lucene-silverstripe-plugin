@@ -138,12 +138,9 @@ $hits = $index->find('Title:personal');
         if ( ! Object::has_extension($object->ClassName, 'ZendSearchLuceneSearchable') ) {
             return;
         }
-
         $index = self::getIndex();
-
         // Remove currently indexed data for this object
         self::delete($object);
-
         $doc = new Zend_Search_Lucene_Document();
         if ( $object->is_a('File') ) {
             // Files get text extracted if possible
@@ -287,8 +284,8 @@ $hits = $index->find('Title:personal');
             $fieldName = $config['name'];
         }
 
-        if ( $config['type'] == 'unstored' ) {
-            return Zend_Search_Lucene_Field::UnStored($fieldName, $value, $encoding);
+        if ( $config['type'] == 'text' ) {
+            return Zend_Search_Lucene_Field::Text($fieldName, $value, $encoding);
         }
         if ( $config['type'] == 'unindexed' ) {
             return Zend_Search_Lucene_Field::UnIndexed($fieldName, $value, $encoding);
@@ -298,8 +295,8 @@ $hits = $index->find('Title:personal');
             if ( $keywordFieldName == 'ID' ) $keywordFieldName = 'ObjectID'; // Don't use 'ID' as it's used by Zend Lucene
             return Zend_Search_Lucene_Field::Keyword($keywordFieldName, $value, $encoding);
         }
-        // Default - index and store as text
-        return Zend_Search_Lucene_Field::Text($fieldName, $value, $encoding);
+        // Default - index and store as unstored
+        return Zend_Search_Lucene_Field::UnStored($fieldName, $value, $encoding);
     }
     
     /**
@@ -408,7 +405,7 @@ $hits = $index->find('Title:personal');
         foreach( $extendedClasses as $className ) {
             $config = singleton($className)->getLuceneClassConfig();
             $query = Object::create('SQLQuery');
-            $baseClass = array_shift(ClassInfo::dataClassesFor($className));
+            $baseClass = ClassInfo::baseDataClass($className);
             $query->select("\"$baseClass\".\"ID\"", "\"$baseClass\".\"ClassName\"");
             $query->from($className);
             if ( $baseClass != $className ) {

@@ -432,7 +432,7 @@ no callbacks are registered.
 To use a callback, you can put something like this in your _config.php:
 
 function create_index_callback() {
-    $index = ZendSeachLuceneWrapper::getIndex();
+    $index = ZendSearchLuceneWrapper::getIndex();
     $index->setMaxBufferedDocs(20);
 }
 ZendSearchLuceneWrapper::addCreateIndexCallback('create_index_callback');
