@@ -76,7 +76,7 @@ This tends to create permissions issues, where the user running the cron job
 can't access files indexed by the web user.  It's best to use a cron job using
 wget or another tool that will hit the webserver directly, eg:
 
-*/1 * * * * wget http://localhost/dev/tasks/ProcessJobQueueTask >> /dev/null 2>&1
+*/1 * * * * wget http://localhost/dev/tasks/ProcessJobQueueTask -O /dev/null
 
 
 Third-Party Utility Installation
