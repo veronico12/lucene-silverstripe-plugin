@@ -59,7 +59,7 @@ class PdfDocumentExtractor extends ZendSearchLuceneTextExtractor {
      */
     public static function extract($filename) {
         if ( ! file_exists($filename) ) return '';
-        if ( trim(shell_exec('which pdftotext')) !== '' ) {
+        if ( self::get_binary_path() ) {
             return self::commandline($filename);
         }
         return self::pdf2text($filename);
@@ -70,7 +70,7 @@ class PdfDocumentExtractor extends ZendSearchLuceneTextExtractor {
      * @access private
      */
     protected static function commandline($filename) {
-        $pdftotext = trim(shell_exec('which pdftotext'));
+        $pdftotext = self::get_binary_path();
         return shell_exec($pdftotext.' '.escapeshellarg($filename).' -'); 
     }
     

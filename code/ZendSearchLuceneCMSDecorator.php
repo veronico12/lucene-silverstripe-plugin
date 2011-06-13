@@ -87,8 +87,35 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
      */
     public function diagnose() {
         echo '<h1>Lucene Diagnosis</h1>';
-        echo '<hr /><h2>Session</h2>';
-        Debug::dump( Session::get_all() );
+        echo '<hr /><h2>Installed programs</h2>';
+        // catdoc - scan older MS documents
+        $catdoc = false;
+        if ( defined('CATDOC_BINARY_LOCATION') && file_exists(CATDOC_BINARY_LOCATION) ) {
+            $catdoc = CATDOC_BINARY_LOCATION;
+        } else if ( file_exists('/usr/bin/catdoc') ) {
+            $catdoc = '/usr/bin/catdoc';
+        } else if ( file_exists('/usr/local/bin/catdoc') ) {
+            $catdoc = '/usr/local/bin/catdoc';
+        }
+        if ( $catdoc ) {
+            echo '<p>Utility <strong>catdoc</strong> is installed at '.$catdoc.' - older MS Office documents will be scanned.</p>';
+        } else {
+            echo '<p>Utility <strong>catdoc</strong> is not installed.  Older MS Office documents will not be scanned.</p>';
+        }
+        // pdftotext - scan PDF documents
+        $pdftotext = false;
+        if ( defined('PDFTOTEXT_BINARY_LOCATION') ) {
+            $pdftotext = PDFTOTEXT_BINARY_LOCATION;
+        } else if ( file_exists('/usr/bin/pdftotext') ) {
+            $pdftotext = '/usr/bin/pdftotext';
+        } else if ( file_exists('/usr/local/bin/pdftotext') ) {
+            $pdftotext = '/usr/local/bin/pdftotext';
+        }
+        if ( $pdftotext ) {
+            echo '<p>Utility <strong>pdftotext</strong> is installed at '.$pdftotext.'.</p>';
+        } else {
+            echo '<p>Utility <strong>pdftotext</strong> is not installed. The PDF2Text class will be used to scan PDF documents.</p>';
+        }
         echo '<hr /><h2>Index</h2>';
         $idx = ZendSearchLuceneWrapper::getIndex();
         echo '<p>Number of records in the index: '.$idx->count().'</p>';
@@ -102,7 +129,7 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
             echo 'This should be high enough to cope with large datasets.';
         } else {
             echo 'This may cause issues with large datasets.</p>';
-            echo '<p>To rectify this, you can add the following lines to your _config.php:</p>';
+            echo '<p>To rectify this, you can add the following lines to functions that may create large datasets, eg. search actions:</p>';
             echo '<pre>'
             .'mysql_query(\'SET GLOBAL net_buffer_length=1000000\');'."\n"
             .'mysql_query(\'SET GLOBAL max_allowed_packet=1000000000\');</pre>';
