@@ -61,8 +61,8 @@ class ZendSearchLuceneWrapper {
             $hits = array();
             try {
                 $index = self::getIndex();
-//                $hits = call_user_func_array(array($index, 'find'), $query);
-$hits = $index->find('Title:personal');
+                $hits = call_user_func_array(array($index, 'find'), $query);
+//$hits = $index->find('Title:personal');
                 SessionSearchCache::cache($query, $hits);
             } catch ( Exception $e) { 
                 user_error(
