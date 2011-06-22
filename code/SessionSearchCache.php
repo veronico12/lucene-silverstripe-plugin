@@ -32,7 +32,11 @@ class SessionSearchCache {
 
     private static function hash($query) {
         if ( ! is_string($query[0]) ) {
-            $query[0] = $query[0]->rewrite(ZendSearchLuceneWrapper::getIndex());
+            try {
+                $query[0] = $query[0]->rewrite(ZendSearchLuceneWrapper::getIndex());
+            } catch (Exception $e) {
+                $query[0] = serialize($query);
+            }
         }
         $hash = 'search_'.md5( serialize($query) );
         return $hash;
