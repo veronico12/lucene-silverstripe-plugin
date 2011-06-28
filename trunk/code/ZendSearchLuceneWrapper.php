@@ -416,6 +416,8 @@ class ZendSearchLuceneWrapper {
             $result = mysql_unbuffered_query($query->sql());
             if ( mysql_error() ) continue; // Can't index this one... ignore for now.
             while( $object = mysql_fetch_object($result) ) {
+                if ( $object->ClassName === null || $object->ID === NULL ) continue;
+                if ( ! in_array($object->ClassName, $extendedClasses) ) continue;
                 // Only re-index if we haven't already indexed this DataObject
                 if ( ! array_key_exists($object->ClassName.' '.$object->ID, $indexed) ) {
                     $indexed[$object->ClassName.' '.$object->ID] = array(
