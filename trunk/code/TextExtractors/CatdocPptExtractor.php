@@ -52,7 +52,13 @@ class CatdocPptExtractor extends ZendSearchLuceneTextExtractor {
         if ( ! file_exists($filename) ) return '';
         $binary = self::get_binary_path();
         if ( !$binary ) return '';
-        return shell_exec($binary.' '.escapeshellarg($filename));
+        $command = escapeshellarg(realpath($binary)).' '.escapeshellarg(realpath($filename));
+        if( strtoupper(substr(PHP_OS, 0,3)) == 'WIN' ) {
+            // PHP has a weird bug where you can't escape the command and 
+            // arguments, so we pass thru cmd
+            $command = 'cmd /c " '.$command.' "'; 
+        }
+        return shell_exec($command);
     }
 
 

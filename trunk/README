@@ -31,6 +31,7 @@ SilverStripe 2.4 or newer
 'Queued Jobs' module
 
 PHP extension zlib required for PDF2Text class.
+PHP extension zip required for newer MS Office document scanning.
 
 This module is currently only tested on LAMP - Windows and Mac OS X should work,
 but are untested.
@@ -94,6 +95,9 @@ If you are on another Linux, Mac OS X, or Windows, the Xpdf program includes
 pdftotext:
 
 http://www.foolabs.com/xpdf/
+
+Under Windows XP, download the Win32 precompiled binary zipfile, and extract the
+pdftotext.exe file somewhere.  
 
 If you do not have the pdftotext utility installed, Lucene will use the 
 PHP-based PDF2Text class by Joeri Stegeman instead.  However, this class is 
