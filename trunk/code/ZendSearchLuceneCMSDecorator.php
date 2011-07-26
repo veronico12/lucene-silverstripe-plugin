@@ -86,7 +86,15 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
      * Method for testing config
      */
     public function diagnose() {
-        echo '<h1>Lucene Diagnosis</h1>';        
+        echo '<h1>Lucene Diagnosis</h1>';
+        echo '<hr /><h2>Dependencies</h2>';
+        if ( ! file_exists(Director::baseFolder().'/queuedjobs') ) {
+            echo '<p>The <strong>Queued Jobs</strong> module is not installed.  Reindexing will not work.</p>';
+            echo '<p>Please install this module to enable Lucene.</p>';
+            echo '<p><a href="http://www.silverstripe.org/queued-jobs-module/">Queued Jobs</a></p>';
+        } else {
+            echo '<p>The <strong>Queued Jobs</strong> module is installed.</p>';
+        }        
         echo '<hr /><h2>Installed programs/extensions</h2>';
         // catdoc - scan older MS documents
         $catdoc = false;
@@ -98,9 +106,15 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
             $catdoc = '/usr/local/bin/catdoc';
         }
         if ( $catdoc ) {
-            echo '<p>Utility <strong>catdoc</strong> is installed at '.$catdoc.' - older MS Office documents will be scanned.</p>';
+            echo '<p>Utility <strong>catdoc</strong> is installed at '.$catdoc.' - older MS Office documents (.doc, .xls, .ppt) will be scanned.</p>';
         } else {
-            echo '<p>Utility <strong>catdoc</strong> is not installed.  Older MS Office documents will not be scanned.</p>';
+            echo '<p>Utility <strong>catdoc</strong> is not installed.  Older MS Office documents (.doc, .xls, .ppt) will not be scanned.</p>';
+        }
+        // zip - scan newer MS documents
+        if ( extension_loaded('zip') ) {
+            echo '<p>PHP extension <strong>zip</strong> is installed - newer MS Office documents (.docx, .xlsx, .pptx) will be scanned.</p>';
+        } else {
+            echo '<p>PHP extension <strong>zip</strong> is not installed - newer MS Office documents (.docx, .xlsx, .pptx) will not be scanned.</p>';
         }
         // pdftotext - scan PDF documents
         $pdftotext = false;
@@ -112,13 +126,13 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
             $pdftotext = '/usr/local/bin/pdftotext';
         }
         if ( $pdftotext ) {
-            echo '<p>Utility <strong>pdftotext</strong> is installed at '.$pdftotext.'.</p>';
+            echo '<p>Utility <strong>pdftotext</strong> is installed at '.$pdftotext.'.  PDF documents will be scanned.</p>';
         } else {
             if ( extension_loaded('zlib') ) {
-                echo '<p>Utility <strong>pdftotext</strong> is not installed. The PDF2Text class will be used to scan PDF documents.</p>';
+                echo '<p>Utility <strong>pdftotext</strong> is not installed, but the PDF2Text class will be used to scan PDF documents.</p>';
             } else {
                 echo '<p>Utility <strong>pdftotext</strong> is not installed, and PHP extension <strong>zlib</strong> is not loaded.  '
-                    .'PDF documents will not be scanned.</p>';
+                    .'PDF documents using gzip compression will not be scanned.  Other PDF documents will be scanned using the PDF2Text class.</p>';
             }
         }
         echo '<hr /><h2>Index</h2>';
