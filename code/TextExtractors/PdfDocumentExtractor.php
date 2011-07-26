@@ -70,8 +70,14 @@ class PdfDocumentExtractor extends ZendSearchLuceneTextExtractor {
      * @access private
      */
     protected static function commandline($filename) {
-        $pdftotext = self::get_binary_path();
-        return shell_exec($pdftotext.' '.escapeshellarg($filename).' -'); 
+        $binary_path = self::get_binary_path();
+        $command = escapeshellarg(realpath($binary_path)).' '.escapeshellarg(realpath($filename)).' -';
+        if( strtoupper(substr(PHP_OS, 0,3)) == 'WIN' ) {
+            // PHP has a weird bug where you can't escape the command and 
+            // arguments, so we pass thru cmd
+            $command = 'cmd /c " '.$command.' "'; 
+        }
+        return shell_exec($command); 
     }
     
     
