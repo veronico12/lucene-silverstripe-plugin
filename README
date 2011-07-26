@@ -59,11 +59,6 @@ You will need to have the 'Queued Jobs' module installed in order to use Lucene:
 
 http://www.silverstripe.org/queued-jobs-module/
   
-To get queued jobs to run, you also need to add $_FILE_TO_URL_MAPPING to your
-_ss_environment.php file as described in the SilverStripe docs:
-
-http://doc.silverstripe.org/sapphire/en/topics/commandline
-
 Run /dev/build?flush=1 to tell your SilverStripe about your new module, and your 
 new search engine is installed!  (You still need to enable it - see below.)
 
@@ -75,11 +70,33 @@ The QueuedJobs module recommends setting your system up to use the
 _ss_environment.php config file, and trigger jobs using a cron job that calls 
 SilverStripe in command line mode.
 
+To get queued jobs to run, you will need to add $_FILE_TO_URL_MAPPING to your
+_ss_environment.php file as described in the SilverStripe docs:
+
+http://doc.silverstripe.org/sapphire/en/topics/commandline
+
 This tends to create permissions issues, where the user running the cron job 
 can't access files indexed by the web user.  It's best to use a cron job using
 wget or another tool that will hit the webserver directly, eg:
 
-*/1 * * * * wget http://localhost/dev/tasks/ProcessJobQueueTask -O /dev/null
+*/1 * * * * wget http://your.server.name/dev/tasks/ProcessJobQueueTask -O /dev/null
+OR
+*/1 * * * * curl http://your.server.name/dev/tasks/ProcessJobQueueTask > /dev/null
+
+Try the command from the commandline to make sure it will work OK.  If it is 
+working, you should see something like this:
+
+wget -q http://your.server.name/dev/tasks/ProcessJobQueueTask -O -
+<h1>Running task 'ProcessJobQueueTask'...</h1>
+[2011-07-27 09:34:17] Processing queue 2
+[2011-07-27 09:34:17] No new jobs
+
+OR
+
+curl http://your.server.name/dev/tasks/ProcessJobQueueTask
+<h1>Running task 'ProcessJobQueueTask'...</h1>
+[2011-07-27 09:35:32] Processing queue 2
+[2011-07-27 09:35:32] No new jobs
 
 
 Third-Party Utility Installation
@@ -116,7 +133,7 @@ http://wagner.pp.ru/~vitus/software/catdoc/
 http://blog.brush.co.nz/2009/09/catdoc-windows/
 http://catdoc.darwinports.com/
 
-Linux and Mac OS X should work right away.
+Linux and Mac OS X should work after installation.
 
 Under Windows you will need to tell Lucene where to find the utilities by adding
 the following to your _config.php:
@@ -221,7 +238,11 @@ The MenuTitle, MetaTitle, MetaDescription and MetaKeywords fields will be
 indexed as Unstored.
 LastEdited and Created fields will be Unindexed.
 ID and ClassName fields will be indexed as Keyword types.
-All other fields will be indexed as Text.
+All other fields will be indexed as Unstored.
+
+Internally this module returns DataObjects containing all the data for each 
+returned result, so there is no need to use the Text type.  Avoiding it will 
+keep index file size down and improve both indexing and search performance.
 
 
 INDEXING RELATIONS
@@ -374,7 +395,10 @@ Object::add_extension(
 
 TESTING THE CONFIGURATION
 
-By visiting /Lucene/diagnose you will get a full readout of your config options.
+By visiting /Lucene/diagnose, you will get a full description of whether any of  
+the optional commandline utilities are installed, and a readout of your config 
+options.
+
 This can help you narrow down any configuration oddities.
 
 
@@ -396,6 +420,11 @@ You can view reindex progress on the 'Jobs' tab, at the top of the CMS.  It will
 display when the job was started, how long it has run for, how many items there
 are to be indexed, and how many have been indexed so far.  If there are any 
 errors, these will also show up here.
+
+You can also visit the URL /Lucene/reindex which will trigger a reindex with 
+some output.  This will allow you to spot any performance bottlenecks.  Objects
+are output as they are indexed in real time.  Note that this isn't suitable for 
+
 
 
 PAGINATION
@@ -422,7 +451,7 @@ ZendSearchLuceneSearchable::$cacheDirectory = TEMP_FOLDER;
 ZendSearchLuceneWrapper::$indexName = 'Silverstripe';
 
 With the default settings, the index will be created in the SilverStripe temp 
-folder, and will be called 'SilverStripe'.
+folder, and will be called 'Lucene'.
 
 
 ADVANCED INDEX CONFIGURATION
@@ -604,7 +633,6 @@ TODO
 
 * Allow the use of multiple indexes per project
 * Query logging
-* Test in Windows / Mac OS X, add instructions for these OSes
 * Add a language file - text strings are already translatable via _t()
 * Make text highlighter more configurable.
 
