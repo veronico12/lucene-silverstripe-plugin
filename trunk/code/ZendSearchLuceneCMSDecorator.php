@@ -86,8 +86,8 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
      * Method for testing config
      */
     public function diagnose() {
-        echo '<h1>Lucene Diagnosis</h1>';
-        echo '<hr /><h2>Installed programs</h2>';
+        echo '<h1>Lucene Diagnosis</h1>';        
+        echo '<hr /><h2>Installed programs/extensions</h2>';
         // catdoc - scan older MS documents
         $catdoc = false;
         if ( defined('CATDOC_BINARY_LOCATION') && file_exists(CATDOC_BINARY_LOCATION) ) {
@@ -114,7 +114,12 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
         if ( $pdftotext ) {
             echo '<p>Utility <strong>pdftotext</strong> is installed at '.$pdftotext.'.</p>';
         } else {
-            echo '<p>Utility <strong>pdftotext</strong> is not installed. The PDF2Text class will be used to scan PDF documents.</p>';
+            if ( extension_loaded('zlib') ) {
+                echo '<p>Utility <strong>pdftotext</strong> is not installed. The PDF2Text class will be used to scan PDF documents.</p>';
+            } else {
+                echo '<p>Utility <strong>pdftotext</strong> is not installed, and PHP extension <strong>zlib</strong> is not loaded.  '
+                    .'PDF documents will not be scanned.</p>';
+            }
         }
         echo '<hr /><h2>Index</h2>';
         $idx = ZendSearchLuceneWrapper::getIndex();

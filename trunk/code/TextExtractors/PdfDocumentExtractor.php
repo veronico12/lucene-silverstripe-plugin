@@ -79,6 +79,9 @@ class PdfDocumentExtractor extends ZendSearchLuceneTextExtractor {
      * @access private
      */
     protected static function pdf2text($filename) {
+        if ( ! extension_loaded('zlib') ) {
+            return '';
+        }
         $pdf = new PDF2Text();
         $pdf->setFilename($filename);
         $pdf->decodePDF();
