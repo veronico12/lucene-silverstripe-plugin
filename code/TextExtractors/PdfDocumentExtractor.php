@@ -84,7 +84,11 @@ class PdfDocumentExtractor extends ZendSearchLuceneTextExtractor {
         }
         $pdf = new PDF2Text();
         $pdf->setFilename($filename);
-        $pdf->decodePDF();
+        try {
+            $pdf->decodePDF();
+        } catch ( Exception $e ) {
+            return '';
+        }
         $content = $pdf->output();
         if ( $content == '' ) {
             // try with different multibyte setting
