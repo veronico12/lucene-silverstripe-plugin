@@ -96,8 +96,10 @@ pdftotext:
 
 http://www.foolabs.com/xpdf/
 
-Under Windows XP, download the Win32 precompiled binary zipfile, and extract the
-pdftotext.exe file somewhere.  
+Under Windows, download the Win32 precompiled binary zipfile, and extract the
+pdftotext.exe file somewhere.  Now add the following line to your _config.php:
+
+define('PDFTOTEXT_BINARY_LOCATION', 'C:\path to your binary\pdftotext.exe');
 
 If you do not have the pdftotext utility installed, Lucene will use the 
 PHP-based PDF2Text class by Joeri Stegeman instead.  However, this class is 
@@ -113,6 +115,15 @@ the catdoc command-line utility.  There are Windows and Mac OS X ports also.
 http://wagner.pp.ru/~vitus/software/catdoc/
 http://blog.brush.co.nz/2009/09/catdoc-windows/
 http://catdoc.darwinports.com/
+
+Linux and Mac OS X should work right away.
+
+Under Windows you will need to tell Lucene where to find the utilities by adding
+the following to your _config.php:
+
+define('CATDOC_BINARY_LOCATION', 'C:\path to your binary\catdoc.exe');
+define('CATPPT_BINARY_LOCATION', 'C:\path to your binary\catppt.exe');
+define('XLS2CSV_BINARY_LOCATION', 'C:\path to your binary\xls2csv.exe');
 
 
 Quick Start
