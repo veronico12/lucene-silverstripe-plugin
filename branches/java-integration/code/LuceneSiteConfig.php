@@ -7,7 +7,7 @@
  * @author Darren Inwood <darren.inwood@chrometoaster.com>
  */
  
-class ZendSearchLuceneSiteConfig extends DataObjectDecorator {
+class LuceneSiteConfig extends DataObjectDecorator {
 
     /**
      * Adds a button the Site Config page of the CMS to rebuild the Lucene search index.
@@ -15,7 +15,7 @@ class ZendSearchLuceneSiteConfig extends DataObjectDecorator {
     public function updateCMSActions(&$actions) {
         $actions->push(
             new InlineFormAction(
-                'rebuildZendSearchLuceneIndex',
+                'rebuildLuceneIndex',
                 _t('ZendSearchLuceneSiteConfig.RebuildIndexButtonText', 'Rebuild Search Index')
             )
         );

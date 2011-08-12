@@ -8,7 +8,7 @@
  * @author Darren Inwood <darren.inwood@chrometoaster.com>
  */
 
-class ZendSearchLuceneTextHighlightDecorator extends Extension {
+class TextHighlightDecorator extends Extension {
 
     /**
      * Returns a part of the field's text with a word or words highlighted.

@@ -28,62 +28,12 @@
  */
 
 class LuceneSearchable extends DataObjectDecorator {
-
-    /**
-     * Number of results per pagination page 
-     * @static
-     */
-    public static $pageLength = 10;        
-
-    /**
-     * Always show this many pages in pagination (can be zero)
-     * @static
-     */
-    public static $alwaysShowPages = 3;    
-
-    /** 
-     * Maximum number of pages shown in pagination (ellipsis are used to indicate more pages)
-     * @static
-     */
-    public static $maxShowPages = 8;
-
-    /**
-     * Encoding in which indexes are created and searches made.
-     * @static
-     */
-    public static $encoding = 'utf-8';
-    
-    /** 
-     * Full filesystem path to the directory where the index files should live 
-     * @static
-     */
-    public static $cacheDirectory = TEMP_FOLDER;
-
-    /**
-     * Boolean indicating whether we should rebuild the index whenever a 
-     * dev/build is run.
-     * @static
-     */
-    public static $reindexOnDevBuild = true;
     
     /**
      * Fields which are also indexed in addition to content fields.
      * @static
      */
     protected static $extraSearchFields = array('ID','ClassName','LastEdited');
-
-    /**
-     * Default fields to index for each Searchable decorated class.  This isn't 
-     * public - it's just a convenience thing, for those people who just want to
-     * get up and running with indexing SiteTree and File with minimum 
-     * configuration.
-     * @access private
-     * @static
-     */
-    protected static $defaultColumns = array(
-		'SiteTree' => 'Title,MenuTitle,Content,MetaTitle,MetaDescription,MetaKeywords',
-		'File' => 'Filename,Title,Content'
-	);
 
     /**
      * Fields which should be indexed as 'unstored' by default.
@@ -218,33 +168,33 @@ class LuceneSearchable extends DataObjectDecorator {
         }
 
         // Is the config bad?
-	    if ( ! is_array($config) ) {
-	        user_error('Your Lucene field config for the class '.$this->owner->class
-	            .' was bad. It needs to be a JSON encoded array, or a comma-separated'
-	            .' list of fieldnames.  See the documentation for details.');
-	    }
+	      if ( ! is_array($config) ) {
+	          user_error('Your Lucene field config for the class '.$this->owner->class
+	              .' was bad. It needs to be a JSON encoded array, or a comma-separated'
+	              .' list of fieldnames.  See the documentation for details.');
+	      }
 
         // Do we have ObjectID in there?  Users can't use that, as it's how we track
         // the ID field internally.
-         if ( 
+        if ( 
             array_key_exists('ObjectID', $config) 
             && (
                 !is_array($config['ObjectID']) 
                 || !isset($config['ObjectID']['name'])
                 || $config['ObjectID']['name'] == 'ObjectID'
             )
-         ) {
+        ) {
             user_error('ObjectID is reserved for internal Lucene use. Try configuring '
             .'that field to be indexed using a different name via the \'name\' config option. '
             .'See the documentation for details.');
             
-         }
+        }
 
         // Also configure extra search fields using default config options
         $config = array_merge(array_flip($this->getExtraSearchFields()), $config);
 
-	    // Set up default info for each field if nothing was provided.
-	    foreach( $config as $fieldName => $data ) {
+	      // Set up default info for each field if nothing was provided.
+	      foreach( $config as $fieldName => $data ) {
             if ( ! is_array($data) ) $data = array();
             $tmp = array(
                 'name' => $fieldName,
@@ -267,7 +217,7 @@ class LuceneSearchable extends DataObjectDecorator {
             }
             if ( !$tmp['type'] ) $tmp['type'] = 'unstored';
             $this->fieldConfig[$fieldName] = $tmp;
-	    }
+	      }
     }
 
     /**
@@ -287,7 +237,7 @@ class LuceneSearchable extends DataObjectDecorator {
         if ( array_key_exists($fieldName, $this->fieldConfig) ) {
             return $this->fieldConfig[$fieldName];
         }
-        user_error("You asked for the config for a field that hasn't had its config set up.");
+        user_error("You asked for the config for field $fieldName, which isn't configured.");
     }
 
     /**
@@ -308,13 +258,13 @@ class LuceneSearchable extends DataObjectDecorator {
         if ( is_array($json) ) $config = $json;
 
         // Is the config bad?
-	    if ( ! is_array($config) ) {
-	        user_error(
-	            'Your Lucene class config for the class '.$this->owner->class
-	            .' was bad. It needs to be a JSON encoded array.  See the '
-	            .'documentation for details.'
-	        );
-	    }
+	      if ( ! is_array($config) ) {
+	          user_error(
+	              'Your Lucene class config for the class '.$this->owner->class
+	              .' was bad. It needs to be a JSON encoded array.  See the '
+	              .'documentation for details.'
+	          );
+	      }
     
         $this->classConfig = $config;
     }
@@ -327,56 +277,6 @@ class LuceneSearchable extends DataObjectDecorator {
         if ( $this->classConfig === null ) $this->setLuceneClassConfig($this->_classConfig);
         return $this->classConfig;
     }
-
-	/**
-	 * Enable the default configuration of Zend Search Lucene searching on the 
-	 * given data classes.
-	 * 
-	 * @param   Array   $searchableClasses  An array of classnames to scan.  Can 
-	 *                                      choose from SiteTree and/or File.
-	 *                                      To not scan any classes, for example
-	 *                                      if we will define custom fields to scan,
-	 *                                      pass in an empty array.
-	 *                                      Defaults to scan SiteTree and File.
-	 */
-	public static function enable($searchableClasses = array('SiteTree', 'File')) {
-        // We can't enable the search engine if we don't have QueuedJobs installed.
-        if ( ! ClassInfo::exists('QueuedJobService') ) {
-            die('<strong>'._t('ZendSearchLucene.ERROR','Error').'</strong>: '
-                ._t('ZendSearchLucene.QueuedJobsRequired',
-                'Lucene requires the Queued jobs module.  See '
-                .'<a href="http://www.silverstripe.org/queued-jobs-module/">'
-                .'http://www.silverstripe.org/queued-jobs-module/</a>.')
-            );
-        }
-        // Set up include path
-        set_include_path(
-            dirname(__FILE__) . PATH_SEPARATOR . get_include_path()
-        );
-		if(!is_array($searchableClasses)) $searchableClasses = array($searchableClasses);
-		foreach($searchableClasses as $class) {
-			if(isset(self::$defaultColumns[$class])) {
-				Object::add_extension($class, "ZendSearchLuceneSearchable('".self::$defaultColumns[$class]."')");
-			} else {
-				user_error("I don't know the default search columns for class '$class'");
-				return;
-			}
-		}
-		Object::add_extension('ContentController', 'ZendSearchLuceneContentController');
-		DataObject::add_extension('SiteConfig', 'ZendSearchLuceneSiteConfig');
-		Object::add_extension('LeftAndMain', 'ZendSearchLuceneCMSDecorator');
-		Object::add_extension('StringField', 'ZendSearchLuceneTextHighlightDecorator');
-		// Set up default encoding and analyzer
-        Zend_Search_Lucene_Search_QueryParser::setDefaultEncoding(ZendSearchLuceneSearchable::$encoding);
-        Zend_Search_Lucene_Analysis_Analyzer::setDefault( 
-            new StandardAnalyzer_Analyzer_Standard_English() 
-        );
-        // Add the /Lucene/xxx URLs
-        Director::addRules(
-            100, 
-            array( 'Lucene' => 'LeftAndMain' )
-        );
-	}
 
     /**
      * Indexes the object after it has been written to the database.

@@ -16,6 +16,13 @@ class ZendLuceneBackend extends LuceneBackend {
 
         if ( ! is_array($config) ) $config = array();
         $this->config = array_merge(self::$default_config, $config);
+
+        Zend_Search_Lucene_Search_QueryParser::setDefaultEncoding(
+            $this->frontend->getConfig('encoding')
+        );
+        Zend_Search_Lucene_Analysis_Analyzer::setDefault( 
+            new StandardAnalyzer_Analyzer_Standard_English() 
+        );
     }
 
     public function setConfig($key, $value) {
