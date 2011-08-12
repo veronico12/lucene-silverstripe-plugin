@@ -17,7 +17,7 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
         'rebuildZendSearchLuceneIndex',
         'reindex',
         'diagnose',
-        'search'
+        'startJavaStandalone'
     );
 
     /**
@@ -53,7 +53,18 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
             .'exhaustion, and is purely for debugging purposes.  Use the '
             .'Queued Jobs reindex process for production indexing.'
             ."<br />\n<br />\n"; flush();
-        ZendSearchLuceneWrapper::getIndex(true);
+        if ( extension_loaded('java') ) {
+            require_once(ZendSearchLuceneWrapper::$javaIncPath);
+            // blank index
+            $index = new java('org.apache.lucene.index.IndexWriter', 
+                ZendSearchLuceneSearchable::$cacheDirectory . DIRECTORY_SEPARATOR . ZendSearchLuceneWrapper::$indexName,
+                new Java('org.apache.lucene.analysis.standard.StandardAnalyzer'),
+                true
+            );
+            $index->close();
+        } else {
+            ZendSearchLuceneWrapper::getIndex(true);
+        }
         $indexable = ZendSearchLuceneWrapper::getAllIndexableObjects();
         foreach( $indexable as $item ) {
             $obj = DataObject::get_by_id($item[0], $item[1]);
@@ -70,16 +81,23 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
     }
 
     /**
-     * Method for testing search
+     * Starts the java command line engine if we're using it.
      */
-    public function search() {
-        $index = ZendSearchLuceneWrapper::getIndex();
-        
-        $hits =  $index->find('Title:personal');
-        var_dump( count($hits) );
-        foreach( $hits as $hit ) {
-            var_dump( $hit->Title );
+    public function startJavaStandalone() {
+        if ( ! extension_loaded('java') ) {
+            echo 'Java bridge extension for PHP is not loaded. Not starting standalone server.';
         }
+    
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $JAVA="javaw";
+        } else {
+            $JAVA="nohup java";
+        }
+        $cwd = getcwd();
+        chdir( dirname(dirname(__FILE__)).'/java' );
+        system("$JAVA -Dphp.java.bridge.daemon='true' -jar JavaBridge.jar SERVLET_LOCAL:8080 &");
+        chdir($cwd);
+        echo 'Started java standalone server.';
     }
 
     /**
@@ -87,15 +105,7 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
      */
     public function diagnose() {
         echo '<h1>Lucene Diagnosis</h1>';
-        echo '<hr /><h2>Dependencies</h2>';
-        if ( ! file_exists(Director::baseFolder().'/queuedjobs') ) {
-            echo '<p>The <strong>Queued Jobs</strong> module is not installed.  Reindexing will not work.</p>';
-            echo '<p>Please install this module to enable Lucene.</p>';
-            echo '<p><a href="http://www.silverstripe.org/queued-jobs-module/">Queued Jobs</a></p>';
-        } else {
-            echo '<p>The <strong>Queued Jobs</strong> module is installed.</p>';
-        }        
-        echo '<hr /><h2>Installed programs/extensions</h2>';
+        echo '<hr /><h2>Installed programs</h2>';
         // catdoc - scan older MS documents
         $catdoc = false;
         if ( defined('CATDOC_BINARY_LOCATION') && file_exists(CATDOC_BINARY_LOCATION) ) {
@@ -106,15 +116,9 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
             $catdoc = '/usr/local/bin/catdoc';
         }
         if ( $catdoc ) {
-            echo '<p>Utility <strong>catdoc</strong> is installed at '.$catdoc.' - older MS Office documents (.doc, .xls, .ppt) will be scanned.</p>';
+            echo '<p>Utility <strong>catdoc</strong> is installed at '.$catdoc.' - older MS Office documents will be scanned.</p>';
         } else {
-            echo '<p>Utility <strong>catdoc</strong> is not installed.  Older MS Office documents (.doc, .xls, .ppt) will not be scanned.</p>';
-        }
-        // zip - scan newer MS documents
-        if ( extension_loaded('zip') ) {
-            echo '<p>PHP extension <strong>zip</strong> is installed - newer MS Office documents (.docx, .xlsx, .pptx) will be scanned.</p>';
-        } else {
-            echo '<p>PHP extension <strong>zip</strong> is not installed - newer MS Office documents (.docx, .xlsx, .pptx) will not be scanned.</p>';
+            echo '<p>Utility <strong>catdoc</strong> is not installed.  Older MS Office documents will not be scanned.</p>';
         }
         // pdftotext - scan PDF documents
         $pdftotext = false;
@@ -126,15 +130,26 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
             $pdftotext = '/usr/local/bin/pdftotext';
         }
         if ( $pdftotext ) {
-            echo '<p>Utility <strong>pdftotext</strong> is installed at '.$pdftotext.'.  PDF documents will be scanned.</p>';
+            echo '<p>Utility <strong>pdftotext</strong> is installed at '.$pdftotext.'.</p>';
         } else {
-            if ( extension_loaded('zlib') ) {
-                echo '<p>Utility <strong>pdftotext</strong> is not installed, but the PDF2Text class will be used to scan PDF documents.</p>';
-            } else {
-                echo '<p>Utility <strong>pdftotext</strong> is not installed, and PHP extension <strong>zlib</strong> is not loaded.  '
-                    .'PDF documents using gzip compression will not be scanned.  Other PDF documents will be scanned using the PDF2Text class.</p>';
-            }
+            echo '<p>Utility <strong>pdftotext</strong> is not installed. The PDF2Text class will be used to scan PDF documents.</p>';
         }
+        echo '<hr /><h2>Java</h2>';
+        if ( ! extension_loaded('java') ) {
+            echo '<p>The php-java-bridge PHP extension is not loaded.  The Zend Lucene code will be used.</p>'
+            .'<p>This is fine for smaller sites, sites with more than a few hundred things to index will benefit '
+            .'from using the Java implementation as it is around 50 times faster to index.</p>';
+        } else {
+            echo '<p>The php-java-bridge PHP extension is loaded.  The Java implementation of Lucene will be used, which is around 50 times faster than the PHP fallback.</p>';
+        }
+        if ( ! ini_get('allow_url_fopen') ) {
+            echo '<p>PHP ini-value <kbd>allow_url_fopen</kbd> is disabled.  Please enable this PHP option in your php.ini or .htaccess file to enable Java.</p>';
+        }
+        if ( ! ini_get('allow_url_include') ) {
+            echo '<p>PHP ini-value <kbd>allow_url_include</kbd> is disabled.  Please enable this PHP option in your php.ini or .htaccess file to enable Java.</p>';
+        }
+        
+
         echo '<hr /><h2>Index</h2>';
         $idx = ZendSearchLuceneWrapper::getIndex();
         echo '<p>Number of records in the index: '.$idx->count().'</p>';
@@ -187,9 +202,6 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
                 @Debug::dump( singleton($class)->getLuceneFieldConfig($fieldname) );
             }
         }
-        
-
-
     }
 
 }
