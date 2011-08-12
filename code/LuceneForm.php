@@ -6,7 +6,7 @@
  * @package lucene-silverstripe-module
  * @author Darren Inwood <darren.inwood@chrometoaster.com>
  */
-class ZendSearchLuceneForm extends Form {
+class LuceneForm extends Form {
 
     public function __construct($controller) {
 		$searchText = isset($_REQUEST['Search']) ? $_REQUEST['Search'] : '';
@@ -18,16 +18,16 @@ class ZendSearchLuceneForm extends Form {
 			)
 		);
 		$actions = Object::create( 'FieldSet',
-			Object::create('FormAction', 'ZendSearchLuceneResults', _t('SearchForm.GO', 'Go'))
+			Object::create('FormAction', 'LuceneResults', _t('SearchForm.GO', 'Go'))
 		);
-		parent::__construct($controller, 'ZendSearchLuceneForm', $fields, $actions);
+		parent::__construct($controller, 'LuceneForm', $fields, $actions);
         $this->disableSecurityToken();
         $this->setFormMethod('get');    
     }
 
 	public function forTemplate() {
 		return $this->renderWith(array(
-			'ZendSearchLuceneForm',
+			'LuceneForm',
 			'Form'
 		));
 	}

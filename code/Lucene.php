@@ -12,12 +12,11 @@ class Lucene extends Object {
      * Configuration for this Lucene instance.
      */
     protected $config = array(
-        'encoding' => 'utf-8',
-        'session_search_cache' => false
     );
 
     public static $default_config = array(
-        'use_session_cache' => false,
+        'encoding' => 'utf-8',
+        'search_cache' => false,
         'index_dir' => TEMP_FOLDER,
         'index_name' => 'Lucene'
     );
@@ -25,13 +24,78 @@ class Lucene extends Object {
     public $config = null;
 
     /**
-     * Does all the object decorating/extending etc.
+     * Enable the default configuration of Zend Search Lucene searching on the 
+     * given data classes.
+     * 
+     * @param   Array   $searchableClasses  An array of classnames to scan.  Can 
+     *                                      choose from SiteTree and/or File.
+     *                                      To not scan any classes, for example
+     *                                      if we will define custom fields to scan,
+     *                                      pass in an empty array.
+     *                                      Defaults to scan SiteTree and File.
      */
-    public static function enable() {
+    public static function enable($searchableClasses = null) {
+        // We can't enable the search engine if we don't have QueuedJobs installed.
+        if ( ! ClassInfo::exists('QueuedJobService') ) {
+            die('<strong>'._t('ZendSearchLucene.ERROR','Error').'</strong>: '
+                ._t('ZendSearchLucene.QueuedJobsRequired',
+                'Lucene requires the Queued Jobs module.  See '
+                .'<a href="http://www.silverstripe.org/queued-jobs-module/">'
+                .'http://www.silverstripe.org/queued-jobs-module/</a>.')
+            );
+        }
+        // These fields will get scanned by default on SiteTree and File
+        $defaultColumns = array(
+		        'SiteTree' => 'Title,MenuTitle,Content,MetaTitle,MetaDescription,MetaKeywords',
+		        'File' => 'Filename,Title,Content'
+    	  );
+        // Set up include path, so we can find the Zend stuff
+        set_include_path(
+            dirname(__FILE__) . PATH_SEPARATOR . get_include_path()
+        );
+        if ( $searchableClasses === null ) $searchableClasses = array();
+        if(!is_array($searchableClasses)) $searchableClasses = array($searchableClasses);
+        foreach($searchableClasses as $class) {
+            if(isset($defaultColumns[$class])) {
+                Object::add_extension($class, "LuceneSearchable('".$defaultColumns[$class]."')");
+            } else {
+                user_error("I don't know the default search columns for class '$class'");
+                return;
+            }
+        }
+        Object::add_extension('ContentController', 'LuceneContentController');
+        DataObject::add_extension('SiteConfig', 'LuceneSiteConfig');
+        Object::add_extension('LeftAndMain', 'LuceneCMSDecorator');
+        Object::add_extension('StringField', 'LuceneTextHighlightDecorator');
+        // Set up default encoding and analyzer
         
+        // Add the /Lucene/xxx URLs
+        Director::addRules(
+            100, 
+            array( 'Lucene' => 'LeftAndMain' )
+        );
     }
 
     //////////     Configuration methods
+
+    /**
+     * The singleton instance.
+     * @static
+     */
+    public static $instance = null;
+
+    /**
+     * Get the singleton instance. 
+     * We should be able to use multiple instances; need to re-code so that we 
+     * can still configure indexes separately without having to completely 
+     * configure each time we instantiate. 
+     */   
+    public static function singleton() {
+        if ( self::$instance === null ) {
+            self::$instance = new Lucene();
+        }
+        return self::$instance;
+    }
 
     /**
      * Automatically sets the backend according to the server's capabilities.
@@ -86,19 +150,19 @@ class Lucene extends Object {
     
     /**
      * Get hits for a query.
-     * Will cache the results if the session_search_cache config option is set.
+     * Will cache the results if the search_cache config option is set.
      * @return DataObjectSet
      */
     public function find($query_string) {
         $hits = false;
-        if ( $this->getConfig('session_search_cache') ) {
-            $hits = SessionSearchCache::getCached($query);
+        if ( $this->getConfig('search_cache') ) {
+            $hits = SearchCache::getCached($query);
         }
         if ( $hits === false ) {
             $hits = $this->backend->find($query_string);
         }
-        if ( self::$useSessionCache ) {
-            SessionSearchCache::cache($query, $hits);
+        if ( $this->getConfig('search_cache') ) {
+            SearchCache::cache($query, $hits);
         }
         return $hits;
     }

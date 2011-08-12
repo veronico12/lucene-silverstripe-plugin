@@ -6,7 +6,7 @@
  * @package lucene-silverstripe-module
  * @author Darren Inwood <darren.inwood@chrometoaster.com>
  */
-class ZendSearchLuceneContentController extends Extension { 
+class LuceneContentController extends Extension { 
 
     /**
      * Enables the search form to talk to the controller.
@@ -14,8 +14,8 @@ class ZendSearchLuceneContentController extends Extension {
      * @static
      */
 	public static $allowed_actions = array(
-		'ZendSearchLuceneForm',
-		'ZendSearchLuceneResults',
+		'LuceneForm',
+		'LuceneResults',
 		'results'
 	);
 
@@ -25,8 +25,8 @@ class ZendSearchLuceneContentController extends Extension {
      * @access public
 	 * @return  Form    A Form object representing the search form.
 	 */
-	public function ZendSearchLuceneForm() {
-		return Object::create('ZendSearchLuceneForm', $this->owner);
+	public function LuceneForm() {
+		return Object::create('LuceneForm', $this->owner);
 	}
 
 	/**
@@ -39,11 +39,10 @@ class ZendSearchLuceneContentController extends Extension {
 	 * @param   SS_HTTPRequest  $request    Request generated for this action
 	 * @return  String                      The rendered form, for inclusion into the page template.
 	 */
-	public function ZendSearchLuceneResults($data, $form, $request) {
+	public function LuceneResults($data, $form, $request) {
 		$querystring = $form->dataFieldByName('Search')->dataValue();
-		$query = Zend_Search_Lucene_Search_QueryParser::parse($querystring);
-		$hits = ZendSearchLuceneWrapper::find($query);
-        $data = $this->getDataArrayFromHits($hits, $request);
+		$lucene = new Lucene();
+		
 		return $this->owner->customise($data)->renderWith(array('Lucene_results', 'Page'));
 	}
 
@@ -52,7 +51,7 @@ class ZendSearchLuceneContentController extends Extension {
      * in templates.
      */
     public function results($data, $form, $request) {
-        return $this->ZendSearchLuceneResults($data, $form, $request);
+        return $this->LuceneResults($data, $form, $request);
     }
 
     /**
@@ -64,13 +63,13 @@ class ZendSearchLuceneContentController extends Extension {
      * @return String       The rendered form, for inclusion into the page template.
      */
     public function SearchForm() {
-        $form = $this->ZendSearchLuceneForm();
+        $form = $this->LuceneForm();
         // Use the same CSS as the stock search form...
         $form->setHTMLId('SearchForm_SearchForm');
-		$actions = $form->Actions();
-		$action = Object::create( 'FormAction', 'results', _t('SearchForm.GO', 'Go'));
-		$action->setForm($form);
-		$actions->replaceField('action_ZendSearchLuceneResults', $action);
+		    $actions = $form->Actions();
+		    $action = Object::create( 'FormAction', 'results', _t('SearchForm.GO', 'Go'));
+		    $action->setForm($form);
+		    $actions->replaceField('action_LuceneResults', $action);
         return $form->renderWith(array(
             'SearchForm', 'Page'
         ));

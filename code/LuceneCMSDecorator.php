@@ -6,7 +6,7 @@
  * @package lucene-silverstripe-module
  * @author Darren Inwood <darren.inwood@chrometoaster.com>
  */
-class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
+class LuceneCMSDecorator extends LeftAndMainDecorator {
 
     /**
      * Enables the extra button added via ZendSearchLuceneSiteConfig.
@@ -14,7 +14,7 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
      * @access public
      */
     public static $allowed_actions = array(
-        'rebuildZendSearchLuceneIndex',
+        'rebuildLuceneIndex',
         'reindex',
         'diagnose',
         'startJavaStandalone'
@@ -27,8 +27,10 @@ class ZendSearchLuceneCMSDecorator extends LeftAndMainDecorator {
      * @access public
      * @return      String          The AJAX response to send to the CMS.
      */
-    public function rebuildZendSearchLuceneIndex() {
-        ZendSearchLuceneWrapper::rebuildIndex();
+    public function rebuildLuceneIndex() {
+        singleton('QueuedJobService')->queueJob(
+            new LuceneReindexJob()
+        );
         FormResponse::status_message( 
             _t('ZendSearchLucene.SuccessMessage', 'A Lucene search index rebuild job has been added to the Jobs queue.'),
             'good'
