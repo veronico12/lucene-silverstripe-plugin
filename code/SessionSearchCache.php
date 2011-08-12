@@ -3,19 +3,28 @@
 /** 
  * This class stores the user's recent searches in their session, so we can 
  * recall search result sets easily.
+ * It is possible to crash this by caching a dataset bigger than the available
+ * memory on the server.
  */
 
 class SessionSearchCache {
 
-    public static function cache($query, $hits) {
+    /**
+     * Store a DataObjectSet in the cache as a list of classnames/IDs.
+     * @param $query (String) The query string this search was for.
+     * @param 
+     */
+    public function cache($query, $dataobjectset) {
         $ids = array();
-        foreach( $hits as $hit ) {
-            $ids[] = array($hit->id, $hit->score);
+        foreach( $dataobjectset as $obj ) {
+            $ids[] = $obj->class . ':' . $obj->ID;
         }
-        Session::set(self::hash($query), serialize($ids));
+        $cache = SS_Cache::factory('foo') ;
+        // implement
     }
     
-    public static function getCached($query) {
+    public function getCached($query) {
+/* Reimplement with DataObjectSet returned and SS_Cache used
         $hits = Session::get(self::hash($query));
         if ( !$hits ) return false;
         $ids = unserialize($hits);
@@ -28,16 +37,10 @@ class SessionSearchCache {
             $docs[] = $doc;
         }
         return $docs;
+*/
     }
 
-    private static function hash($query) {
-        if ( ! is_string($query[0]) ) {
-            try {
-                $query[0] = $query[0]->rewrite(ZendSearchLuceneWrapper::getIndex());
-            } catch (Exception $e) {
-                $query[0] = serialize($query);
-            }
-        }
+    private function hash($query) {
         $hash = 'search_'.md5( serialize($query) );
         return $hash;
     }
