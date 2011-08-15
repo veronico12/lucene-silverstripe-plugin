@@ -6,7 +6,7 @@ class Lucene extends Object {
      * The backend to use.  Must be an implementation of LuceneWrapperInterface.
      * @static
      */
-    protected $backend;
+    public $backend;
 
     /**
      * Configuration for this Lucene instance.
@@ -20,8 +20,6 @@ class Lucene extends Object {
         'index_dir' => TEMP_FOLDER,
         'index_name' => 'Lucene'
     );
-
-    public $config = null;
 
     /**
      * Enable the default configuration of Zend Search Lucene searching on the 
@@ -66,7 +64,8 @@ class Lucene extends Object {
         Object::add_extension('ContentController', 'LuceneContentController');
         DataObject::add_extension('SiteConfig', 'LuceneSiteConfig');
         Object::add_extension('LeftAndMain', 'LuceneCMSDecorator');
-        Object::add_extension('StringField', 'LuceneTextHighlightDecorator');
+        Object::add_extension('StringField', 'TextHighlightDecorator');
+
         // Set up default encoding and analyzer
         
         // Add the /Lucene/xxx URLs
@@ -88,7 +87,8 @@ class Lucene extends Object {
      * Get the singleton instance. 
      * We should be able to use multiple instances; need to re-code so that we 
      * can still configure indexes separately without having to completely 
-     * configure each time we instantiate. 
+     * configure each time we instantiate.  Perhaps some sort of factory plus 
+     * config registry.
      */   
     public static function singleton() {
         if ( self::$instance === null ) {
@@ -99,10 +99,8 @@ class Lucene extends Object {
 
     /**
      * Automatically sets the backend according to the server's capabilities.
-     * Will use the Java backend if possible, otherwise will fall back to the 
-     * Zend backend.
      */
-    protected function __construct($config = null, &$backend = null) {
+    public function __construct($config = null, &$backend = null) {
         if ( ! is_array($config) ) $config = array();
         $this->config = array_merge(self::$default_config, $config);
         if ( $backend === null ) {
@@ -167,11 +165,74 @@ class Lucene extends Object {
         return $hits;
     }
 
+    /**
+     * Delete a DataObject from the search index.
+     * @param $item (DataObject) The DataObject to remove from the index.
+     */
     public function delete($item) {
         if ( ! Object::has_extension($item->ClassName, 'LuceneSearchable') ) {
             return;
         }
         return $this->backend->delete($item);
+    }
+
+    /**
+     * Deletes all info in the index.
+     */
+    public function wipeIndex() {
+        return $this->backend->wipeIndex();
+    }
+
+    public function commit() {
+        return $this->backend->commit();
+    }
+
+    public function optimize() {
+        return $this->backend->optimize();
+    }
+
+    public function close() {
+        return $this->backend->close();
+    }    
+
+    /**
+     * Returns a data array of all indexable DataObjects.  For use when reindexing.
+     */
+    public static function getAllIndexableObjects($className='DataObject') {
+        $possibleClasses = ClassInfo::subclassesFor($className);
+        $extendedClasses = array();
+        foreach( $possibleClasses as $possibleClass ) {
+            if ( Object::has_extension($possibleClass, 'LuceneSearchable') ) {
+                $extendedClasses[] = $possibleClass;
+            }
+        }
+        $indexed = array();
+        foreach( $extendedClasses as $className ) {
+            $config = singleton($className)->getLuceneClassConfig();
+            $query = Object::create('SQLQuery');
+            $baseClass = ClassInfo::baseDataClass($className);
+            $query->select("\"$baseClass\".\"ID\"", "\"$baseClass\".\"ClassName\"");
+            $query->from($className);
+            if ( $baseClass != $className ) {
+                $query->leftJoin($baseClass, "\"$className\".\"ID\" = \"$baseClass\".\"ID\"");
+            }
+            $filter = $config['index_filter'] ? $config['index_filter'] : '';
+            $query->where($filter);
+            $result = mysql_unbuffered_query($query->sql());
+            if ( mysql_error() ) continue; // Can't index this one... ignore for now.
+            while( $object = mysql_fetch_object($result) ) {
+                if ( $object->ClassName === null || $object->ID === NULL ) continue;
+                if ( ! in_array($object->ClassName, $extendedClasses) ) continue;
+                // Only re-index if we haven't already indexed this DataObject
+                if ( ! array_key_exists($object->ClassName.' '.$object->ID, $indexed) ) {
+                    $indexed[$object->ClassName.' '.$object->ID] = array(
+                        $object->ClassName, 
+                        $object->ID
+                    );
+                }
+            }
+        }
+        return $indexed;
     }
 
 }

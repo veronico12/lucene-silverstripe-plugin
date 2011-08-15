@@ -54,7 +54,7 @@ class ZendLuceneBackend extends LuceneBackend {
         $extracted_text = $this->extract_text($item);
         if ( $extracted_text ) {
             $field = Zend_Search_Lucene_Field::UnStored(
-                'body',  // We're storing exatrcted text from files in a field called 'body'.
+                'body',  // We're storing extracted text from files in a field called 'body'.
                 $extracted_text, 
                 $this->frontend->getConfig('encoding')
             );
@@ -64,9 +64,9 @@ class ZendLuceneBackend extends LuceneBackend {
         // Index the fields we've specified in the config
         $fields = array_merge($item->getExtraSearchFields(), $item->getSearchFields());
         foreach( $fields as $fieldName ) {
-            $field_config = $object->getLuceneFieldConfig($fieldName);
+            $field_config = $item->getLuceneFieldConfig($fieldName);
             // Normal database field or function call
-            $field = $this->getZendField($object, $fieldName);
+            $field = $this->getZendField($item, $fieldName);
             if ( isset($field_config['boost']) ) $field->boost = $field_config['boost'];
             $doc->addField($field);            
         }
@@ -74,11 +74,15 @@ class ZendLuceneBackend extends LuceneBackend {
         // Add URL if we have a function called Link().  We didn't use the 
         // extraSearchFields mechanism for this because it's not a property on 
         // all objects, so this is the most sensible place for it.
-        if ( method_exists(get_class($object), 'Link') && ! in_array('Link', $fields) ) {
-            $doc->addField(Zend_Search_Lucene_Field::UnIndexed('Link', $object->Link()));
+        if ( method_exists(get_class($item), 'Link') && ! in_array('Link', $fields) ) {
+            $doc->addField(Zend_Search_Lucene_Field::UnIndexed('Link', $item->Link()));
         }
 
         $this->getIndex()->addDocument($doc);
+    }
+
+    public function doIndex() {
+        return $this->index();
     }
     
     /**
@@ -91,7 +95,6 @@ class ZendLuceneBackend extends LuceneBackend {
      * @return (DataObjectSet) A DataObjectSet of DataObject search results.
      */
     public function find($query_string) {
-        $query = func_get_args();
         $out = Object::create('DataObjectSet');
         try {
             $hits = $this->getIndex()->find($query_string);
@@ -121,6 +124,26 @@ class ZendLuceneBackend extends LuceneBackend {
             if ( $hit->ClassName != $item->ClassName ) continue;
             $index->delete($hit->id);
         }
+    }
+
+    public function doDelete($item) {
+        return $this->delete($item);
+    }
+
+    public function wipeIndex() {
+        $this->getIndex(true);
+    }
+
+    public function commit() {
+        $this->getIndex()->commit();
+    }
+    
+    public function optimize() {
+        $this->getIndex()->optimize();    
+    }
+
+    public function close() {
+        // not needed, Zend tidies this up by itself
     }
 
     //////////     Helper methods
@@ -166,7 +189,7 @@ class ZendLuceneBackend extends LuceneBackend {
      * @param   String      $fieldName  The name of the field to fetch a Zend field for.
      * @return  Zend_Search_Lucene_Field
      */
-    private static function getZendField($object, $fieldName) {
+    protected function getZendField($object, $fieldName) {
         $encoding = $this->frontend->getConfig('encoding');
         $config = $object->getLuceneFieldConfig($fieldName);
 
@@ -202,7 +225,7 @@ class ZendLuceneBackend extends LuceneBackend {
     /**
      * Cleans up the index if it's needed.
      */
-    private function __destruct() {
+    public function __destruct() {
         if ( $this->index === null ) return;
         $this->getIndex()->commit();
     }

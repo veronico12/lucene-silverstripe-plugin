@@ -18,10 +18,22 @@ abstract class LuceneBackend extends Object {
 
     /**
      * Indexes any DataObject which has the LuceneSearchable extension.
+     * Should be atomic and suitable for a single indexing operation rather than
+     * bulk processing.  Should close all open files, etc, so that the application
+     * can exit after calling this function with no ill effects.
      * @param $item (DataObject) The object to index.
      */
     abstract public function index($item);
     
+    /**
+     * Indexes any DataObject which has the LuceneSearchable extension.
+     * Should be suitable for bulk loading; may leave files open etc.
+     * If using this method, it is your responsibility to call commit() and/or
+     * close().
+     * @param $item (DataObject) The object to index.
+     */
+    abstract public function doIndex($item);
+
     /**
      * Queries the search engine and returns results.
      * @param $query_string (String) The query to send to the search engine.
@@ -31,9 +43,32 @@ abstract class LuceneBackend extends Object {
 
     /**
      * Deletes a DataObject from the search index.
+     * Should be atomic and suitable for a single indexing operation rather than
+     * bulk processing.  Should close all open files, etc, so that the application
+     * can exit after calling this function with no ill effects.
      * @param $item (DataObject) The item to delete.
      */
     abstract public function delete($item);
+
+    /**
+     * Deletes a DataObject from the search index.
+     * Should be suitable for bulk loading; may leave files open etc.
+     * If using this method, it is your responsibility to call commit() and/or
+     * close().
+     * @param $item (DataObject) The item to delete.
+     */
+    abstract public function doDelete($item);
+
+    abstract public function commit();
+    
+    abstract public function optimize();
+
+    abstract public function close();
+
+    /**
+     * Blank out the index if it exists.
+     */
+    abstract public function wipeIndex();
 
     //////////     Non-backend-specific helper functions
 
