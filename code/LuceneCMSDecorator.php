@@ -14,6 +14,7 @@ class LuceneCMSDecorator extends LeftAndMainDecorator {
      * @access public
      */
     public static $allowed_actions = array(
+        'test',
         'rebuildLuceneIndex',
         'reindex',
         'diagnose',
@@ -55,51 +56,23 @@ class LuceneCMSDecorator extends LeftAndMainDecorator {
             .'exhaustion, and is purely for debugging purposes.  Use the '
             .'Queued Jobs reindex process for production indexing.'
             ."<br />\n<br />\n"; flush();
-        if ( extension_loaded('java') ) {
-            require_once(ZendSearchLuceneWrapper::$javaIncPath);
-            // blank index
-            $index = new java('org.apache.lucene.index.IndexWriter', 
-                ZendSearchLuceneSearchable::$cacheDirectory . DIRECTORY_SEPARATOR . ZendSearchLuceneWrapper::$indexName,
-                new Java('org.apache.lucene.analysis.standard.StandardAnalyzer'),
-                true
-            );
-            $index->close();
-        } else {
-            ZendSearchLuceneWrapper::getIndex(true);
-        }
-        $indexable = ZendSearchLuceneWrapper::getAllIndexableObjects();
+        $lucene =& Lucene::singleton();
+        $lucene->wipeIndex();
+        $indexable = $lucene->getAllIndexableObjects();
         foreach( $indexable as $item ) {
             $obj = DataObject::get_by_id($item[0], $item[1]);
             if ( $obj ) {
                 $obj_start = microtime(true);
                 echo $item[0].' '.$item[1].' ('.$obj->class.')'; flush();
-                ZendSearchLuceneWrapper::index($obj);
+                $lucene->backend->doIndex($obj);
                 echo ' - '.round(microtime(true)-$obj_start, 3).' seconds'."<br />\n"; flush();
             } else {
                 echo 'Object '.$item[0].' '.$item[1].' was not found.'."<br />\n"; flush();
             }
         }
+        $lucene->commit();
+        $lucene->close();
         echo "<br />\n".'Finished ('.round(microtime(true)-$start, 3).' seconds)'."<br />\n"; flush();
-    }
-
-    /**
-     * Starts the java command line engine if we're using it.
-     */
-    public function startJavaStandalone() {
-        if ( ! extension_loaded('java') ) {
-            echo 'Java bridge extension for PHP is not loaded. Not starting standalone server.';
-        }
-    
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $JAVA="javaw";
-        } else {
-            $JAVA="nohup java";
-        }
-        $cwd = getcwd();
-        chdir( dirname(dirname(__FILE__)).'/java' );
-        system("$JAVA -Dphp.java.bridge.daemon='true' -jar JavaBridge.jar SERVLET_LOCAL:8080 &");
-        chdir($cwd);
-        echo 'Started java standalone server.';
     }
 
     /**
@@ -153,9 +126,9 @@ class LuceneCMSDecorator extends LeftAndMainDecorator {
         
 
         echo '<hr /><h2>Index</h2>';
-        $idx = ZendSearchLuceneWrapper::getIndex();
-        echo '<p>Number of records in the index: '.$idx->count().'</p>';
-        echo '<p>Number of records in the index (excluding deleted records): '.$idx->numDocs().'</p>';
+        $lucene =& Lucene::singleton();
+        echo '<p>Number of records in the index: '.$lucene->numDocs().'</p>';
+        echo '<p>Number of records in the index (excluding deleted records): '.$lucene->numDocs().'</p>';
         echo '<hr /><h2>Database setup</h2>';
         $max_packet = mysql_fetch_object( 
             mysql_query('SELECT @@max_allowed_packet AS size') 

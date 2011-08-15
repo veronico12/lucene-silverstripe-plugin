@@ -342,7 +342,6 @@ class LuceneSearchable extends DataObjectDecorator {
      * <code>
      * ZendSearchLuceneSearchable::$reindexOnDevBuild = false;
      * </code>
-     */
     public function requireDefaultRecords() {
         if ( ! self::$reindexOnDevBuild ) return;
         ZendSearchLuceneWrapper::rebuildIndex();
@@ -352,6 +351,7 @@ class LuceneSearchable extends DataObjectDecorator {
         // Only run once
         self::$reindexOnDevBuild = false;
     }
+     */
 
 }
 
