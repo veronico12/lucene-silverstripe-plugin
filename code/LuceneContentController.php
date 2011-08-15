@@ -132,7 +132,6 @@ class LuceneContentController extends Extension {
      * @param   Integer         $pageLength The number of results to show per page
      *                                      (defaults to ZendSearchLuceneSearchable::$pageLength)
      * @return  Array                       A custom array containing pagination data.
-     */
     public function getDataArrayFromHits($hits, $request, $start = null, $pageLength = null) {
 		$data = array(
 			'Results' => null,
@@ -271,5 +270,6 @@ class LuceneContentController extends Extension {
 
         return $data;
     }
+     */
 
 }

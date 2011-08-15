@@ -283,22 +283,16 @@ class LuceneSearchable extends DataObjectDecorator {
      */
     public function onAfterWrite() {
         parent::onAfterWrite();
-        // Obey index filter rules
-        $objs = ZendSearchLuceneWrapper::getAllIndexableObjects($this->owner->ClassName);
-        foreach( $objs as $obj ) {
-            if ( ! is_array($obj) ) continue;
-            if ( ! is_object($this->owner) ) continue;
-            if ( $obj[0] == $this->owner->class && $obj[1] == $this->owner->ID ) {
-                ZendSearchLuceneWrapper::index($this->owner);
-            }
-        }
+        $lucene =& Lucene::singleton();        
+        $lucene->index($this->owner);
     }
 
     /**
      * Removes the object from the search index after it has been deleted.
      */
     function onAfterDelete() {
-        ZendSearchLuceneWrapper::delete($this->owner);
+        $lucene =& Lucene::singleton();        
+        $lucene->delete($this->owner);
         parent::onAfterDelete();
     }
 

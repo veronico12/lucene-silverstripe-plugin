@@ -111,8 +111,11 @@ class JavaLuceneBackend extends LuceneBackend {
      *   - LuceneRecordID: the 'hit ID' which can be used to delete the record
      *     from the database.
      *   - LuceneScore: the 'score' assigned to the result by Lucene.
+     * An additional property 'totalHits' is set on the DataObjectSet, showing 
+     * how many hits there were in total.
      * @param $query_string (String) The query to send to the search engine.
-     * @return (DataObjectSet) A DataObjectSet of DataObject search results.
+     * @return (DataObjectSet) A DataObjectSet of DataObject search results. 
+     *          An additional property 'totalHits' is set on the DataObjectSet.
      */
     public function find($query_string) {
         $version = Java('org.apache.lucene.util.Version')->LUCENE_33;
@@ -143,6 +146,8 @@ class JavaLuceneBackend extends LuceneBackend {
             $out->push($obj);
         }
         $searcher->close();
+        
+        $out->totalHits = java_values($top_docs->totalHits);
         
         return $out;
     }
