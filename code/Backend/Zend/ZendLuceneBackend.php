@@ -114,6 +114,12 @@ class ZendLuceneBackend extends LuceneBackend {
         return $out;
     }
 
+    public function findWithSort($query_string, $fieldName, $reverse=false) {
+    
+    
+    
+    }
+
     /**
      * Deletes a DataObject from the search index.
      * @param $item (DataObject) The item to delete.

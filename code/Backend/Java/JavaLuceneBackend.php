@@ -118,6 +118,10 @@ class JavaLuceneBackend extends LuceneBackend {
      *          An additional property 'totalHits' is set on the DataObjectSet.
      */
     public function find($query_string) {
+        return $this->findWithSort($query_string, 'score');
+    }
+
+    public function findWithSort($query_string, $fieldName, $reverse=false) {
         $version = Java('org.apache.lucene.util.Version')->LUCENE_33;
         $query_parser = new java('org.apache.lucene.queryParser.QueryParser',
             $version,
@@ -131,8 +135,22 @@ class JavaLuceneBackend extends LuceneBackend {
             'org.apache.lucene.store.SimpleFSDirectory',
             new Java('java.io.File', $this->frontend->getIndexDirectoryName())
         );
+        switch( $fieldName ) {
+            case 'score':
+                $sortType = java('org.apache.lucene.search.SortField')->SCORE;
+            break;
+            case 'id':
+                $sortType = java('org.apache.lucene.search.SortField')->DOC;
+            break;
+            default:
+                $sortType = java('org.apache.lucene.search.SortField')->STRING;
+            break;        
+        }
+        $sort = new java('org.apache.lucene.search.Sort', 
+            new java('org.apache.lucene.search.SortField', $fieldName, $sortType, $reverse)
+        );
         $searcher = new java("org.apache.lucene.search.IndexSearcher", $index_dir);
-        $top_docs = $searcher->search($query, 100);
+        $top_docs = $searcher->search($query, 1000, $sort);
         
         // Create our result output set.
         $out = Object::create('DataObjectSet');
@@ -200,6 +218,11 @@ class JavaLuceneBackend extends LuceneBackend {
         $this->indexWriter = null;
     }
 
+    /**
+     * Starts the Java standalone Lucene server.  
+     * The port this runs on can be set using eg. $lucene->backend->setConfig(8081)
+     * to avoid colliding with Tomcat or another server running on port 8080.
+     */
     protected function startStandalone() {
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             $JAVA="javaw";

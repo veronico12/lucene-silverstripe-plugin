@@ -42,6 +42,16 @@ abstract class LuceneBackend extends Object {
     abstract public function find($query_string);
 
     /**
+     * Queries the search engone and returns results sorted by a specified field.
+     * @param $query_string (String) The Lucene query language string to search.
+     * @param $sortField (String) The field to sort on
+     * @param $reverse (Boolean) True orders results in reverse, false (the
+     *                  default) orders results normally.
+     * @return DataObjectSet
+     */
+    abstract public function findWithSort($query_string, $sortField, $reverse=false);
+
+    /**
      * Deletes a DataObject from the search index.
      * Should be atomic and suitable for a single indexing operation rather than
      * bulk processing.  Should close all open files, etc, so that the application
