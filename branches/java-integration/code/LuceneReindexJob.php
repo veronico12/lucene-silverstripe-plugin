@@ -16,11 +16,11 @@ class LuceneReindexJob extends AbstractQueuedJob implements QueuedJob {
     }
 
     public function getTitle() {
-        return _t('ZendSearchLucene.ReindexJobTitle', 'Rebuild the Lucene search engine index');
+        return _t('Lucene.ReindexJobTitle', 'Rebuild the Lucene search engine index');
     }
 
     public function getSignature() {
-        return 'ZendSearchLuceneReindexJob';
+        return 'LuceneReindexJob';
     }
 
     public function setup() {

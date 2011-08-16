@@ -149,6 +149,8 @@ class Lucene extends Object {
     /**
      * Get hits for a query.
      * Will cache the results if the search_cache config option is set.
+     *
+     * @param $query_string (String) The Lucene query language string to search.
      * @return DataObjectSet
      */
     public function find($query_string) {
@@ -165,6 +167,31 @@ class Lucene extends Object {
         return $hits;
     }
 
+    /**
+     * Get hits for a query, sorted by a specified field.
+     * The field must be indexed.
+     * Will cache the results if the search_cache config option is set.
+     *
+     * 
+     * @param $query_string (String) The Lucene query language string to search.
+     * @param $numResults (Integer) Number of results to return
+     * @param $sort 
+     * @return DataObjectSet
+     */
+    public function findWithSort($query_string, $sortField, $sortOrder) {
+        $hits = false;
+        if ( $this->getConfig('search_cache') ) {
+            $hits = SearchCache::getCached($query);
+        }
+        if ( $hits === false ) {
+            $hits = $this->backend->findWithSort($query_string, $sortField, $sortOrder);
+        }
+        if ( $this->getConfig('search_cache') ) {
+            SearchCache::cache($query, $hits);
+        }
+        return $hits;
+    }
+     
     /**
      * Delete a DataObject from the search index.
      * @param $item (DataObject) The DataObject to remove from the index.
