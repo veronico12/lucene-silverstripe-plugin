@@ -104,7 +104,7 @@ class Lucene extends Object {
         if ( ! is_array($config) ) $config = array();
         $this->config = array_merge(self::$default_config, $config);
         if ( $backend === null ) {
-            if ( extension_loaded('java') && ini_get('allow_url_fopen') && ini_get('allow_url_include') ) {
+            if ( ini_get('allow_url_fopen') && ini_get('allow_url_include') ) {
                 $backend = new JavaLuceneBackend($this);
             } else {
                 $backend = new ZendLuceneBackend($this);

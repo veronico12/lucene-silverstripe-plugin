@@ -110,13 +110,6 @@ class LuceneCMSDecorator extends LeftAndMainDecorator {
             echo '<p>Utility <strong>pdftotext</strong> is not installed. The PDF2Text class will be used to scan PDF documents.</p>';
         }
         echo '<hr /><h2>Java</h2>';
-        if ( ! extension_loaded('java') ) {
-            echo '<p>The php-java-bridge PHP extension is not loaded.  The Zend Lucene code will be used.</p>'
-            .'<p>This is fine for smaller sites, sites with more than a few hundred things to index will benefit '
-            .'from using the Java implementation as it is around 50 times faster to index.</p>';
-        } else {
-            echo '<p>The php-java-bridge PHP extension is loaded.  The Java implementation of Lucene will be used, which is around 50 times faster than the PHP fallback.</p>';
-        }
         if ( ! ini_get('allow_url_fopen') ) {
             echo '<p>PHP ini-value <kbd>allow_url_fopen</kbd> is disabled.  Please enable this PHP option in your php.ini or .htaccess file to enable Java.</p>';
         }
