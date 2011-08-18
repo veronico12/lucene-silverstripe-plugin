@@ -107,13 +107,15 @@ class JavaLuceneBackend extends LuceneBackend {
 
     /**
      * Queries the search engine and returns results.
-     * All dataobjects have two additional properties added:
-     *   - LuceneRecordID: the 'hit ID' which can be used to delete the record
-     *     from the database.
+     * All dataobjects returned have two additional properties added:
+     *   - LuceneRecordID: the Lucene 'Document ID' which can be used to delete 
+     *     the record from the database.
      *   - LuceneScore: the 'score' assigned to the result by Lucene.
      * An additional property 'totalHits' is set on the DataObjectSet, showing 
      * how many hits there were in total.
-     * @param $query_string (String) The query to send to the search engine.
+     * @param $query_string (String) The query to send to the search engine.  
+     *          This could be a string, or it could be a org.apache.lucene.search.Query
+     *          object.
      * @return (DataObjectSet) A DataObjectSet of DataObject search results. 
      *          An additional property 'totalHits' is set on the DataObjectSet.
      */
@@ -121,40 +123,96 @@ class JavaLuceneBackend extends LuceneBackend {
         return $this->findWithSort($query_string, 'score');
     }
 
-    public function findWithSort($query_string, $fieldName, $reverse=false) {
-        $version = Java('org.apache.lucene.util.Version')->LUCENE_33;
-        $query_parser = new java('org.apache.lucene.queryParser.QueryParser',
-            $version,
-            'Title',
-            new java('org.apache.lucene.analysis.standard.StandardAnalyzer', $version)
-        );
-        $query = $query_parser->parse($query_string);
+    /**
+     * Queries the search engine and returns results, with sorting.
+     * All dataobjects returned have two additional properties added:
+     *   - LuceneRecordID: the Lucene 'document ID' which can be used to delete 
+     *     the record from the database.
+     *   - LuceneScore: the 'score' assigned to the result by Lucene.
+     * An additional property 'totalHits' is set on the DataObjectSet, showing 
+     * how many hits there were in total.
+     * @param $query_string (String) The query to send to the search engine.  
+     *          This could be a string, or it could be a org.apache.lucene.search.Query
+     *          object.
+     * @param $sort (Mixed) This could either be the name of a field to 
+     *          sort on, or a org.apache.lucene.search.Sort object.  You can 
+     *          sort by the Lucene 'score' field to order things by relevance.
+     * @param $reverse (Boolean) If a field name string is used for $sort, 
+     *          determines whether the results will be ordered in normal or 
+     *          reverse order.  If a org.apache.lucene.search.Sort object is 
+     *          used for $sort, this parameter is ignored - you should include
+     *          all your sorting requirements in the $sort object.
+     * @return (DataObjectSet) A DataObjectSet of DataObject search results. 
+     *          An additional property 'totalHits' is set on the DataObjectSet.
+     */
+    public function findWithSort($query_string, $sort, $reverse=false) {
 
-        // Get our results...
+        $version = Java('org.apache.lucene.util.Version')->LUCENE_33;
+
+        // Prepare query
+        if ( is_string($query_string) ) {
+            // We need to use PerFieldAnalyzerWrapper to catch Keyword fields
+            $analyzer = new java('org.apache.lucene.analysis.PerFieldAnalyzerWrapper',
+                new java('org.apache.lucene.analysis.standard.StandardAnalyzer', $version)
+            );
+            $extendedClasses = Lucene::get_extended_classes();
+            $addedClasses = array();
+            foreach( $extendedClasses as $extendedClass ) {
+                $extendedClass = singleton($extendedClass);
+                $fields = $extendedClass->getSearchedVars();
+                foreach( $fields as $field ) {
+                    if ( in_array($field, $addedClasses) ) continue;  // no need to add twice
+                    $config = $extendedClass->getLuceneFieldConfig($field);
+                    if ( !isset($config['type']) || $config['type'] != 'keyword' ) continue;
+                    $analyzer->addAnalyzer(
+                        $field, 
+                        new java('org.apache.lucene.analysis.KeywordAnalyzer')
+                    );
+                    $addedClasses[] = $field;
+                }
+            }
+            $query_parser = new java('org.apache.lucene.queryParser.QueryParser',
+                $version,
+                'Title',
+                $analyzer
+            );
+            $query = $query_parser->parse($query_string);
+        } else {
+            // We can pass in a java query object if we like - lets us do fancy stuff with 
+            // the query API rather than building up Query Parser strings if we want to.
+            $query =& $query_string;
+        }
+
+        // Prepare sort object if we're using a string fieldname
+        if ( is_string($sort) ) {
+            switch( $sort ) {
+                case 'score':
+                    $sortType = java('org.apache.lucene.search.SortField')->SCORE;
+                break;
+                case 'id':
+                    $sortType = java('org.apache.lucene.search.SortField')->DOC;
+                break;
+                default:
+                    $sortType = java('org.apache.lucene.search.SortField')->STRING;
+                break;        
+            }
+            $sort = new java('org.apache.lucene.search.Sort', 
+                new java('org.apache.lucene.search.SortField', $sort, $sortType, $reverse)
+            );
+        }
+
+        // Get results
         $index_dir = new Java(
             'org.apache.lucene.store.SimpleFSDirectory',
             new Java('java.io.File', $this->frontend->getIndexDirectoryName())
         );
-        switch( $fieldName ) {
-            case 'score':
-                $sortType = java('org.apache.lucene.search.SortField')->SCORE;
-            break;
-            case 'id':
-                $sortType = java('org.apache.lucene.search.SortField')->DOC;
-            break;
-            default:
-                $sortType = java('org.apache.lucene.search.SortField')->STRING;
-            break;        
-        }
-        $sort = new java('org.apache.lucene.search.Sort', 
-            new java('org.apache.lucene.search.SortField', $fieldName, $sortType, $reverse)
-        );
         $searcher = new java("org.apache.lucene.search.IndexSearcher", $index_dir);
         $top_docs = $searcher->search($query, 1000, $sort);
-        
-        // Create our result output set.
+
+        // Create result output set
         $out = Object::create('DataObjectSet');
-        foreach( java_values($top_docs->scoreDocs) as $score_doc ) {
+        $score_docs = java_values($top_docs->scoreDocs);
+        foreach( $score_docs as $score_doc ) {
             $doc = $searcher->doc($score_doc->doc);
             $obj = DataObject::get_by_id(
                 java_values($doc->get('ClassName')), 
@@ -164,9 +222,9 @@ class JavaLuceneBackend extends LuceneBackend {
             $out->push($obj);
         }
         $searcher->close();
-        
+
         $out->totalHits = java_values($top_docs->totalHits);
-        
+
         return $out;
     }
     
@@ -187,7 +245,7 @@ class JavaLuceneBackend extends LuceneBackend {
             'Title',
             new java('org.apache.lucene.analysis.standard.StandardAnalyzer', $version)
         );
-        $query = $query_parser->parse('ObjectID:'.$item->ID.' ClassName:'.$item->ClassName);
+        $query = $query_parser->parse('+ObjectID:'.$item->ID.' AND +ClassName:'.$item->ClassName);
 
         $this->getIndexWriter()->deleteDocuments($query);    
     }

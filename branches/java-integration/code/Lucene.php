@@ -22,6 +22,18 @@ class Lucene extends Object {
     );
 
     /**
+     * The singleton instance.
+     * @static
+     */
+    public static $instance = null;
+
+    /**
+     * Registry of extended classes.  Access via Lucene::get_extended_classes()
+     * @static
+     */
+    protected static $extended_classes = null;
+
+    /**
      * Enable the default configuration of Zend Search Lucene searching on the 
      * given data classes.
      * 
@@ -66,8 +78,6 @@ class Lucene extends Object {
         Object::add_extension('LeftAndMain', 'LuceneCMSDecorator');
         Object::add_extension('StringField', 'TextHighlightDecorator');
 
-        // Set up default encoding and analyzer
-        
         // Add the /Lucene/xxx URLs
         Director::addRules(
             100, 
@@ -76,12 +86,6 @@ class Lucene extends Object {
     }
 
     //////////     Configuration methods
-
-    /**
-     * The singleton instance.
-     * @static
-     */
-    public static $instance = null;
 
     /**
      * Get the singleton instance. 
@@ -95,6 +99,30 @@ class Lucene extends Object {
             self::$instance = new Lucene();
         }
         return self::$instance;
+    }
+
+    /**
+     * Sets up a class to be searched by Lucene.  Using this method instead of 
+     * Object::add_extension directly allows us to keep a registry of configured 
+     * classes, which speeds searches up.
+     *
+     * It also allows us to configure classes without needing to use horrible 
+     * nested quotes in strings or elaborate json_encoded arrays.
+     */
+    public static function add_extension($className, $config = null) {
+        if ( $config === null ) {
+            $config = '';
+        } elseif ( is_array($config) ) {
+            $config = "'".json_encode($config)."'";
+        } elseif ( is_string($config) ) {
+            $config = "'".$config."'";
+        }
+        Object::add_extension($className, "LuceneSearchable(".$config.")");
+        Lucene::$extended_classes[] = $className;
+    }
+
+    public static function get_extended_classes() {
+        return Lucene::$extended_classes;
     }
 
     /**
