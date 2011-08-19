@@ -9,7 +9,9 @@ class JavaLuceneBackend extends LuceneBackend {
     protected $config;
 
     public static $default_config = array(
-        'servlet_port' => 8080
+        'servlet_port' => 8080,
+        // analyzer can be 'standard' or 'english'
+        'analyzer' => 'standard'
     );
 
     //////////     Java-specific Configuration
@@ -153,7 +155,7 @@ class JavaLuceneBackend extends LuceneBackend {
         if ( is_string($query_string) ) {
             // We need to use PerFieldAnalyzerWrapper to catch Keyword fields
             $analyzer = new java('org.apache.lucene.analysis.PerFieldAnalyzerWrapper',
-                new java('org.apache.lucene.analysis.standard.StandardAnalyzer', $version)
+                $this->getAnalyzer()
             );
             $extendedClasses = Lucene::get_extended_classes();
             $addedClasses = array();
@@ -239,13 +241,12 @@ class JavaLuceneBackend extends LuceneBackend {
     }
 
     public function doDelete($item) {
-        $version = Java('org.apache.lucene.util.Version')->LUCENE_33;
         $query_parser = new java('org.apache.lucene.queryParser.QueryParser',
-            $version,
+            Java('org.apache.lucene.util.Version')->LUCENE_33,
             'Title',
-            new java('org.apache.lucene.analysis.standard.StandardAnalyzer', $version)
+            $this->getAnalyzer()
         );
-        $query = $query_parser->parse('+ObjectID:'.$item->ID.' AND +ClassName:'.$item->ClassName);
+        $query = $query_parser->parse('+ObjectID:'.$item->ID.' +ClassName:'.$item->ClassName);
 
         $this->getIndexWriter()->deleteDocuments($query);    
     }
@@ -292,6 +293,23 @@ class JavaLuceneBackend extends LuceneBackend {
         system("$JAVA -Dphp.java.bridge.daemon='true' -jar JavaBridge.jar SERVLET_LOCAL:".$this->getConfig('servlet_port')." &");
         chdir($cwd);    
     }
+
+    /**
+     * Creates an analyzer according to the config
+     */
+    protected function getAnalyzer() {
+        $version = Java('org.apache.lucene.util.Version')->LUCENE_33;
+        switch ( $this->config['analyzer'] ) {
+            default:
+            case 'standard':
+                $analyzer = new java('org.apache.lucene.analysis.standard.StandardAnalyzer', $version);
+            break;
+            case 'english':
+                $analyzer = new java('org.apache.lucene.analysis.en.EnglishAnalyzer', $version);
+            break;
+        }
+        return $analyzer;
+    }
     
     /**
      * Always close() your indexwriter before the script exits!!!  Can't do it 
@@ -300,11 +318,10 @@ class JavaLuceneBackend extends LuceneBackend {
     protected function &getIndexWriter($wipe = false) {        
         if ( $this->indexWriter === null ) {
             $version = Java('org.apache.lucene.util.Version')->LUCENE_33;
-            $analyzer = new java('org.apache.lucene.analysis.standard.StandardAnalyzer', $version); 
             $conf = new Java(
                 'org.apache.lucene.index.IndexWriterConfig',
                 $version,
-                $analyzer
+                $this->getAnalyzer()
             );
             if ( $wipe ) {
                 $conf->setOpenMode( java('org.apache.lucene.index.IndexWriterConfig$OpenMode')->CREATE );
