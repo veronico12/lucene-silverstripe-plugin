@@ -59,15 +59,27 @@ class LuceneCMSDecorator extends LeftAndMainDecorator {
         $lucene =& Lucene::singleton();
         $lucene->wipeIndex();
         $indexable = $lucene->getAllIndexableObjects();
+        $count = 0;
         foreach( $indexable as $item ) {
             $obj = DataObject::get_by_id($item[0], $item[1]);
             if ( $obj ) {
-                $obj_start = microtime(true);
-                echo $item[0].' '.$item[1].' ('.$obj->class.')'; flush();
+                $count++;
                 $lucene->backend->doIndex($obj);
-                echo ' - '.round(microtime(true)-$obj_start, 3).' seconds'."<br />\n"; flush();
+                if ( $count % 10 == 0 ) {
+                    echo '.'; 
+                    flush();
+                }
+                if ( $count % 100 == 0 ) {
+                    echo ' '.$count.' ';
+                    flush();
+                }
+                if ( $count % 1000 == 0 ) {
+                    echo '<br/>';
+                    flush();
+                }
             } else {
-                echo 'Object '.$item[0].' '.$item[1].' was not found.'."<br />\n"; flush();
+                echo 'Object '.$item[0].' '.$item[1].' was not found.'."<br />\n"; 
+                flush();
             }
         }
         $lucene->commit();
