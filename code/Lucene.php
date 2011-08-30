@@ -159,7 +159,7 @@ class Lucene extends Object {
     }
 
     public function getIndexDirectoryName() {
-        return $this->getConfig('index_dir') . '/' . $this->getCOnfig('index_name');
+        return $this->getConfig('index_dir') . '/' . $this->getConfig('index_name');
     }
     
     //////////     Runtime methods
