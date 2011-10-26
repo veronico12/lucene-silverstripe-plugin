@@ -81,8 +81,8 @@ class ZendLuceneBackend extends LuceneBackend {
         $this->getIndex()->addDocument($doc);
     }
 
-    public function doIndex() {
-        return $this->index();
+    public function doIndex($item) {
+        return $this->index($item);
     }
     
     /**
