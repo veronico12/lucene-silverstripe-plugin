@@ -16,7 +16,7 @@ class ZendSearchLuceneTextHighlightDecorator extends Extension {
      *
      * @param $numWords     Integer     Number of words to output. Default is
      *                                  25.
-     * @param $addParaTags  Boolean     Whether to add HTML paragraph tags 
+     * @param $addParaTags  Boolean     Whether to add HTML paragraph tags
      *                                  around the output. Default is true.
      * @return An HTMLText object containing the highlighted text as HTML.
      */
@@ -37,9 +37,9 @@ class ZendSearchLuceneTextHighlightDecorator extends Extension {
         }
         // Get 25 words, starting two words before a highlighted word.
         if ( count(explode(' ', $text)) > $numWords ) {
-            $text = implode(' ', 
+            $text = implode(' ',
                 array_slice(
-                    explode(' ', $text), 
+                    explode(' ', $text),
                     max(0, $first - 2),
                     $numWords
                 )
@@ -47,10 +47,13 @@ class ZendSearchLuceneTextHighlightDecorator extends Extension {
             if ( substr($orig,-10) != substr($text,-10) && strlen($text) < strlen($orig) ) $text .= '...';
             if ( $first != 0 ) $text = '...' . $text;
         }
+
         foreach( $words as $word ) {
+			if ( $word === '' ) continue;
             $word = preg_quote($word);
             $text = preg_replace("/\b($word)\b/i", '<strong>\1</strong>', $text);
         }
+
         if ( $addParaTags ) $text = '<p>'.$text.'</p>';
         return DBField::create('HTMLText', $text, $this->owner->name);
     }
